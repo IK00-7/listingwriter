@@ -10,6 +10,7 @@ export default function Pricing() {
   const router = useRouter()
   const [billingCycle, setBillingCycle] = useState('monthly')
   const [showContactForm, setShowContactForm] = useState(false)
+  const [loading, setLoading] = useState(null)
   const [contactForm, setContactForm] = useState({
     name: '',
     email: '',
@@ -42,6 +43,7 @@ export default function Pricing() {
     pro: {
       name: 'Pro',
       price: { monthly: 29, annual: 290 },
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || process.env.STRIPE_PRO_PRICE_ID,
       description: 'For serious sellers scaling their business',
       features: [
         '50 AI-generated listings per month',
@@ -60,6 +62,7 @@ export default function Pricing() {
     business: {
       name: 'Business',
       price: { monthly: 79, annual: 790 },
+      priceId: process.env.NEXT_PUBLIC_STRIPE_BUSINESS_PRICE_ID || process.env.STRIPE_BUSINESS_PRICE_ID,
       description: 'For agencies and high-volume sellers',
       features: [
         'Unlimited AI-generated listings',
@@ -92,13 +95,47 @@ export default function Pricing() {
     }, 2000)
   }
 
-  const handlePlanSelect = (planKey) => {
+  const handlePlanSelect = async (planKey) => {
     if (planKey === 'free') {
       router.push('/dashboard')
-    } else if (planKey === 'business') {
+      return
+    }
+    
+    if (planKey === 'business') {
       setShowContactForm(true)
-    } else if (planKey === 'pro') {
-      alert('🚧 Stripe integration coming soon!\n\nFor now, contact us to upgrade.')
+      return
+    }
+    
+    if (planKey === 'pro') {
+      if (!session) {
+        router.push('/')
+        return
+      }
+
+      setLoading('pro')
+
+      try {
+        const res = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
+            tier: 'pro'
+          }),
+        })
+
+        const data = await res.json()
+
+        if (data.url) {
+          window.location.href = data.url
+        } else {
+          throw new Error('No checkout URL returned')
+        }
+      } catch (error) {
+        console.error('Checkout error:', error)
+        alert('Failed to start checkout. Please try again.')
+        setLoading(null)
+      }
     }
   }
 
@@ -114,6 +151,14 @@ export default function Pricing() {
 
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '4rem 2rem' }}>
           
+          {router.query.canceled && (
+            <div className="card" style={{ background: 'rgba(239, 184, 16, 0.1)', border: '1px solid rgba(239, 184, 16, 0.3)', marginBottom: '2rem', maxWidth: '600px', margin: '0 auto 2rem' }}>
+              <p style={{ fontSize: '0.875rem', color: '#fbbf24', textAlign: 'center' }}>
+                ⚠️ Payment canceled. No charges were made. Feel free to try again!
+              </p>
+            </div>
+          )}
+
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1rem', background: 'linear-gradient(135deg, #10b981, #34d399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               Simple, Transparent Pricing
@@ -228,7 +273,7 @@ export default function Pricing() {
 
                 <button
                   onClick={() => handlePlanSelect(key)}
-                  disabled={session?.user?.tier === key}
+                  disabled={session?.user?.tier === key || loading === key}
                   className="btn-primary"
                   style={{
                     width: '100%',
@@ -237,11 +282,11 @@ export default function Pricing() {
                     background: plan.popular ? '#10b981' : 'rgba(16, 185, 129, 0.1)',
                     color: plan.popular ? '#0a0e1a' : '#10b981',
                     border: plan.popular ? 'none' : '1px solid rgba(16, 185, 129, 0.3)',
-                    opacity: session?.user?.tier === key ? 0.5 : 1,
-                    cursor: session?.user?.tier === key ? 'not-allowed' : 'pointer'
+                    opacity: (session?.user?.tier === key || loading === key) ? 0.5 : 1,
+                    cursor: (session?.user?.tier === key || loading === key) ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {session?.user?.tier === key ? '✓ Current Plan' : plan.cta}
+                  {loading === key ? '⏳ Loading...' : session?.user?.tier === key ? '✓ Current Plan' : plan.cta}
                 </button>
 
                 <div style={{ borderTop: '1px solid #1f2937', paddingTop: '1.5rem' }}>
