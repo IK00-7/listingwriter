@@ -1,497 +1,481 @@
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from './auth/[...nextauth]'
-import { getUserByEmail, incrementListingsUsed, saveListing } from '../../lib/db'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/router'
+import Head from 'next/head'
+import Header from '../components/Header'
 
-const CHAR_LIMITS = {
-  amazon: { title: 200, bullet: 500, description: 2000 },
-  shopify: { title: 70, bullet: 500, description: 5000 },
-  ebay: { title: 80, bullet: 500, description: 5000 }
-}
-
-const BLACKLIST = [
-  'high quality',
-  'premium feel',
-  'best choice',
-  'great product',
-  'amazing',
-  'perfect',
-  'innovative',
-  'top tier',
-  'excellent',
-  'superior',
-  'outstanding',
-  'incredible',
-  'fantastic'
-]
-
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  const session = await getServerSession(req, res, authOptions)
+export default function Dashboard() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [marketplace, setMarketplace] = useState('amazon')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
+  const [hoveredScore, setHoveredScore] = useState(null)
+  const [improving, setImproving] = useState(null)
   
-  if (!session?.user?.email) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
+  const [showCsvModal, setShowCsvModal] = useState(false)
+  const [csvFile, setCsvFile] = useState(null)
+  const [csvProcessing, setCsvProcessing] = useState(false)
+  const [csvResults, setCsvResults] = useState([])
+  const [csvProgress, setCsvProgress] = useState(0)
 
-  try {
-    const user = await getUserByEmail(session.user.email)
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' })
-    }
-
-    if (user.listings_used >= user.listings_limit) {
-      return res.status(403).json({ 
-        error: 'Limit reached',
-        message: `You've used all ${user.listings_limit} listings this month. Upgrade to continue!` 
-      })
-    }
-
-    const { productName, features, pricePoint, marketplace, improvementFocus } = req.body
-
-    if (!productName || !features) {
-      return res.status(400).json({ error: 'Product name and features required' })
-    }
-
-    const featureList = features.split('\n').filter(f => f.trim()).slice(0, 6)
-    const aiOutput = await generateWithGroq(productName, featureList, marketplace, pricePoint, improvementFocus)
-    const scores = calculateScores(aiOutput.title, aiOutput.bullets, aiOutput.description, productName, marketplace)
-
-    const result = { ...aiOutput, ...scores }
-
-    await saveListing(user.id, {
-      productName,
-      marketplace,
-      title: result.title,
-      bullets: result.bullets,
-      description: result.description,
-      metaData: result.metaData,
-      htmlOutput: result.htmlOutput,
-      seoScore: result.seoScore,
-      conversionScore: result.conversionScore,
-      readabilityScore: result.readabilityScore,
-      errorScore: result.errorScore
-    })
-
-    await incrementListingsUsed(user.id)
-
-    res.status(200).json(result)
-  } catch (error) {
-    console.error('Generation error:', error)
-    
-    const featureList = req.body.features.split('\n').filter(f => f.trim()).slice(0, 6)
-    const fallback = generateFallback(req.body.productName, featureList, req.body.marketplace, req.body.pricePoint)
-    
-    res.status(200).json(fallback)
-  }
-}
-
-async function generateWithGroq(productName, features, marketplace, pricePoint, improvementFocus) {
-  const groqApiKey = process.env.GROQ_API_KEY
-  if (!groqApiKey) throw new Error('GROQ_API_KEY not configured')
-
-  const charLimit = CHAR_LIMITS[marketplace].title
-  const bulletCount = marketplace === 'amazon' ? 5 : 4
-  const featureText = features.join(', ')
-
-  let systemMessage = 'You are an expert e-commerce copywriter. You always follow the exact format requested.'
-  
-  let userMessage = 'Create a ' + marketplace + ' product listing for: ' + productName + '. Key features: ' + featureText + '. Price tier: ' + pricePoint + '. CRITICAL: Follow this EXACT format with these EXACT labels:\n\nTITLE:\n(write title under ' + charLimit + ' characters)\n\nBULLETS:\n1. HOOK: Detail here\n2. HOOK: Detail here\n3. HOOK: Detail here\n4. HOOK: Detail here\n' + (marketplace === 'amazon' ? '5. HOOK: Detail here\n' : '') + '\nDESCRIPTION:\n(write 2-3 compelling sentences)\n\nKEYWORDS:\n(comma-separated keywords)\n\nURL_SLUG:\n(url-friendly-slug)\n\nRules: No vague words like amazing, perfect, best, high quality, innovative. Be specific and benefit-focused.'
-
-  if (improvementFocus) {
-    userMessage += '\n\nIMPORTANT: ' + improvementFocus
-  }
-
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + groqApiKey,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: systemMessage },
-        { role: 'user', content: userMessage }
-      ],
-      temperature: 0.7,
-      max_tokens: 1500
-    })
+  const [animatedScores, setAnimatedScores] = useState({
+    seo: 0,
+    conversion: 0,
+    readability: 0,
+    errors: 0
   })
 
-  if (!response.ok) throw new Error('Groq API error: ' + response.status)
+  const [titleLength, setTitleLength] = useState(0)
 
-  const data = await response.json()
-  const aiContent = data.choices[0]?.message?.content || ''
-  
-  return parseAIResponse(aiContent, marketplace, productName)
-}
+  const [formData, setFormData] = useState({
+    productName: '',
+    features: '',
+    pricePoint: 'mid',
+  })
 
-function parseAIResponse(aiText, marketplace, productName) {
-  const lines = aiText.split('\n')
-  
-  let title = ''
-  let description = ''
-  let keywords = ''
-  let urlSlug = ''
-  let bullets = []
-  let currentSection = ''
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
-    
-    if (line === 'TITLE:' || line.startsWith('TITLE:')) {
-      currentSection = 'title'
-      const content = line.replace('TITLE:', '').trim()
-      if (content) {
-        title = content
-      }
-      continue
-    }
-    if (line === 'BULLETS:' || line.startsWith('BULLETS:')) {
-      currentSection = 'bullets'
-      continue
-    }
-    if (line === 'DESCRIPTION:' || line.startsWith('DESCRIPTION:')) {
-      currentSection = 'description'
-      const content = line.replace('DESCRIPTION:', '').trim()
-      if (content) {
-        description = content
-      }
-      continue
-    }
-    if (line === 'KEYWORDS:' || line.startsWith('KEYWORDS:')) {
-      currentSection = 'keywords'
-      const content = line.replace('KEYWORDS:', '').trim()
-      if (content) {
-        keywords = content
-      }
-      continue
-    }
-    if (line === 'URL_SLUG:' || line.startsWith('URL_SLUG:') || line.startsWith('URL SLUG:')) {
-      currentSection = 'urlslug'
-      const content = line.replace(/URL[_\s]SLUG:/i, '').trim()
-      if (content) {
-        urlSlug = content
-      }
-      continue
-    }
-    
-    if (!line) {
-      continue
-    }
-    
-    if (currentSection === 'title' && line && !line.match(/^\d+\./)) {
-      title = title + (title ? ' ' : '') + line
-    }
-    
-    if (currentSection === 'bullets') {
-      if (line.match(/^\d+\./)) {
-        const text = line.replace(/^\d+\.\s*/, '')
-        const parts = text.split(':')
-        if (parts.length >= 2) {
-          bullets.push({ hook: parts[0].trim(), detail: parts.slice(1).join(':').trim() })
+  const LIMITS = {
+    amazon: { title: 200, features: 1000 },
+    shopify: { title: 70, features: 1000 },
+    ebay: { title: 80, features: 1000 }
+  }
+
+  const scoreExplanations = {
+    seo: "How well your listing will rank in search results. Higher scores mean better keyword placement and discoverability.",
+    conversion: "How persuasive your copy is. Higher scores mean more customers will click 'Buy Now'.",
+    readability: "How easy your listing is to understand. Higher scores mean customers can quickly grasp the value.",
+    quality: "Overall polish and professionalism. Higher scores mean error-free, marketplace-compliant listings."
+  }
+
+  const getScoreColor = (score) => {
+    if (score >= 95) return '#10b981'
+    if (score >= 90) return '#34d399'
+    if (score >= 85) return '#fbbf24'
+    if (score >= 80) return '#f59e0b'
+    return '#ef4444'
+  }
+
+  const isPro = session?.user?.tier === 'pro' || session?.user?.tier === 'business'
+
+  useEffect(() => {
+    setTitleLength(formData.productName.length)
+  }, [formData])
+
+  useEffect(() => {
+    if (result) {
+      setAnimatedScores({ seo: 0, conversion: 0, readability: 0, errors: 0 })
+      const duration = 1500
+      const fps = 60
+      const frames = duration / (1000 / fps)
+      let frame = 0
+      const interval = setInterval(() => {
+        frame++
+        const progress = frame / frames
+        setAnimatedScores({
+          seo: Math.floor(result.seoScore * progress),
+          conversion: Math.floor(result.conversionScore * progress),
+          readability: Math.floor(result.readabilityScore * progress),
+          errors: Math.floor(result.errorScore * progress)
+        })
+        if (frame >= frames) {
+          setAnimatedScores({
+            seo: result.seoScore,
+            conversion: result.conversionScore,
+            readability: result.readabilityScore,
+            errors: result.errorScore
+          })
+          clearInterval(interval)
         }
-      }
+      }, 1000 / fps)
+      return () => clearInterval(interval)
     }
-    
-    if (currentSection === 'description' && !line.startsWith('KEYWORDS') && !line.startsWith('URL')) {
-      description = description + (description ? ' ' : '') + line
-    }
-    
-    if (currentSection === 'keywords' && !line.startsWith('URL')) {
-      keywords = keywords + (keywords ? ', ' : '') + line
-    }
-    
-    if (currentSection === 'urlslug') {
-      urlSlug = urlSlug + (urlSlug ? '-' : '') + line
-    }
-  }
-  
-  title = cleanText(title)
-  if (!title || title.length < 10) {
-    title = productName + ' - Premium Quality'
-  }
-  if (title.length > CHAR_LIMITS[marketplace].title) {
-    title = title.substring(0, CHAR_LIMITS[marketplace].title)
-  }
-  
-  description = cleanText(description)
-  if (!description || description.length < 20) {
-    description = productName + ' delivers exceptional quality and performance for your needs.'
-  }
-  
-  if (bullets.length === 0) {
-    bullets = [
-      { hook: 'KEY BENEFIT', detail: 'Premium construction ensures lasting value and satisfaction' },
-      { hook: 'PRACTICAL DESIGN', detail: 'Thoughtful details make daily use effortless and enjoyable' },
-      { hook: 'RELIABLE PERFORMANCE', detail: 'Built to deliver consistent results you can count on' },
-      { hook: 'SATISFACTION GUARANTEED', detail: 'Backed by quality assurance and responsive support' }
-    ]
-  }
-  
-  if (!keywords) {
-    keywords = productName.toLowerCase()
-  }
-  
-  if (!urlSlug) {
-    urlSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-  }
-  
-  const scores = calculateScores(title, bullets, description, productName, marketplace)
-  
-  const metaDescription = description.length > 155 ? description.substring(0, 152) + '...' : description
-  
-  return {
-    title: title,
-    bullets: bullets,
-    description: description,
-    metaData: {
-      metaDescription: metaDescription,
-      keywords: keywords,
-      urlSlug: urlSlug
-    },
-    htmlOutput: generateHTML(title, bullets, description),
-    seoScore: scores.seoScore,
-    conversionScore: scores.conversionScore,
-    readabilityScore: scores.readabilityScore,
-    errorScore: scores.errorScore
-  }
-}
+  }, [result])
 
-function generateFallback(productName, features, marketplace, pricePoint) {
-  const firstFeature = features[0] || 'Quality Product'
-  let title = productName + ' - ' + firstFeature
-  
-  if (title.length > CHAR_LIMITS[marketplace].title) {
-    title = title.substring(0, CHAR_LIMITS[marketplace].title)
+  if (status === 'loading') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0e1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
+          <p style={{ color: '#9ca3af' }}>Loading...</p>
+        </div>
+      </div>
+    )
   }
-  
-  const bulletCount = marketplace === 'amazon' ? 5 : 4
-  const bulletHooks = ['KEY BENEFIT', 'PRACTICAL VALUE', 'QUALITY BUILD', 'PERFECT FOR', 'GUARANTEE']
-  
-  const bullets = []
-  for (let i = 0; i < bulletCount; i++) {
-    const feature = features[i] || 'Premium quality construction'
-    const hook = bulletHooks[i] || 'FEATURE'
-    bullets.push({
-      hook: hook,
-      detail: feature + ' provides reliable performance and value'
+
+  if (status === 'unauthenticated') {
+    router.push('/')
+    return null
+  }
+
+  const handleGenerate = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    setResult(null)
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, marketplace }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to generate listing')
+      setResult(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleImproveScore = async (scoreType) => {
+    if (!isPro) {
+      router.push('/pricing')
+      return
+    }
+    setImproving(scoreType)
+    const improvementPrompts = {
+      seo: 'Focus heavily on SEO optimization. Use the primary keyword more naturally throughout. Add related keywords.',
+      conversion: 'Make the copy more persuasive and compelling. Add urgency, scarcity, and stronger calls-to-action.',
+      readability: 'Simplify the language. Use shorter sentences. Make it easier to scan and understand quickly.',
+      quality: 'Polish the copy to perfection. Ensure flawless formatting, no errors, and professional tone throughout.'
+    }
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, marketplace, improvementFocus: improvementPrompts[scoreType] }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to improve listing')
+      setResult(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setImproving(null)
+    }
+  }
+
+  const handleCsvUpload = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (!file.name.endsWith('.csv')) {
+      alert('Please upload a CSV file')
+      return
+    }
+    setCsvFile(file)
+  }
+
+  const processCsvFile = async () => {
+    if (!csvFile) return
+    if (!isPro) {
+      router.push('/pricing')
+      return
+    }
+    setCsvProcessing(true)
+    setCsvProgress(0)
+    setCsvResults([])
+    try {
+      const text = await csvFile.text()
+      const lines = text.split('\n').filter(line => line.trim())
+      const dataLines = lines.slice(1)
+      const results = []
+      for (let i = 0; i < dataLines.length; i++) {
+        const line = dataLines[i]
+        const columns = line.split(',').map(col => col.trim().replace(/^"|"$/g, ''))
+        if (columns.length < 2) continue
+        const productName = columns[0]
+        const features = columns[1]
+        const pricePoint = columns[2] || 'mid'
+        try {
+          const res = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productName, features, pricePoint, marketplace }),
+          })
+          const data = await res.json()
+          if (res.ok) {
+            results.push({ productName, success: true, data })
+          } else {
+            results.push({ productName, success: false, error: data.message || 'Generation failed' })
+          }
+        } catch (err) {
+          results.push({ productName, success: false, error: err.message })
+        }
+        setCsvProgress(Math.round(((i + 1) / dataLines.length) * 100))
+      }
+      setCsvResults(results)
+    } catch (err) {
+      alert('Failed to process CSV: ' + err.message)
+    } finally {
+      setCsvProcessing(false)
+    }
+  }
+
+  const downloadCsvResults = () => {
+    let csvContent = 'Product Name,Title,Description,Bullets,SEO Score,Conversion Score\n'
+    csvResults.forEach(result => {
+      if (result.success) {
+        const bullets = result.data.bullets.map(b => `${b.hook}: ${b.detail}`).join(' | ')
+        const row = [
+          result.productName,
+          result.data.title,
+          result.data.description,
+          bullets,
+          result.data.seoScore,
+          result.data.conversionScore
+        ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')
+        csvContent += row + '\n'
+      }
     })
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'listingwriter-results.csv'
+    a.click()
+    window.URL.revokeObjectURL(url)
   }
-  
-  const topFeatures = features.slice(0, 2).join(', ') || 'quality and reliability'
-  const description = productName + ' delivers quality with ' + topFeatures + '. Built for lasting value and everyday use.'
-  
-  const scores = calculateScores(title, bullets, description, productName, marketplace)
-  
-  return {
-    title: cleanText(title),
-    bullets: bullets,
-    description: cleanText(description),
-    metaData: {
-      metaDescription: description.substring(0, 155),
-      keywords: productName.toLowerCase(),
-      urlSlug: productName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-    },
-    htmlOutput: generateHTML(title, bullets, description),
-    seoScore: scores.seoScore,
-    conversionScore: scores.conversionScore,
-    readabilityScore: scores.readabilityScore,
-    errorScore: scores.errorScore
-  }
-}
 
-function generateHTML(title, bullets, description) {
-  let html = '<h1>' + title + '</h1>\n\n<ul>\n'
-  for (let i = 0; i < bullets.length; i++) {
-    html = html + '  <li><strong>' + bullets[i].hook + ':</strong> ' + bullets[i].detail + '</li>\n'
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+    alert('Copied to clipboard!')
   }
-  html = html + '</ul>\n\n<p>' + description + '</p>'
-  return html
-}
 
-function calculateScores(title, bullets, description, keyword, marketplace) {
-  let seo = 80
-  let conversion = 80
-  let readability = 85
-  let errors = 90
-  
-  const titleLower = title.toLowerCase()
-  const descLower = description.toLowerCase()
-  const keywordWords = keyword.toLowerCase().split(' ')
-  const productWords = []
-  
-  for (let i = 0; i < keywordWords.length; i++) {
-    if (keywordWords[i].length > 3) {
-      productWords.push(keywordWords[i])
-    }
+  const getCharCountColor = (length, limit) => {
+    if (length === 0) return '#6b7280'
+    if (length > limit) return '#ef4444'
+    if (length > limit * 0.9) return '#f59e0b'
+    return '#10b981'
   }
-  
-  let titleHasKeyword = false
-  for (let i = 0; i < productWords.length; i++) {
-    if (titleLower.includes(productWords[i])) {
-      titleHasKeyword = true
-      seo = seo + 8
-      break
-    }
-  }
-  
-  if (productWords.length > 0) {
-    const keywordPosition = titleLower.indexOf(productWords[0])
-    if (keywordPosition >= 0 && keywordPosition < 20) {
-      seo = seo + 5
-    }
-  }
-  
-  let descKeywordCount = 0
-  for (let i = 0; i < productWords.length; i++) {
-    const matches = descLower.match(new RegExp(productWords[i], 'g'))
-    if (matches) {
-      descKeywordCount = descKeywordCount + matches.length
-    }
-  }
-  
-  if (descKeywordCount >= 2 && descKeywordCount <= 4) {
-    seo = seo + 5
-  } else if (descKeywordCount === 1) {
-    seo = seo + 2
-  }
-  
-  if (bullets && bullets.length >= 4) {
-    conversion = conversion + 5
-  }
-  
-  let strongHookCount = 0
-  if (bullets) {
-    for (let i = 0; i < bullets.length; i++) {
-      const hook = bullets[i].hook || ''
-      const hookUpper = hook.toUpperCase()
-      if (hookUpper.includes('BENEFIT') || hookUpper.includes('VALUE') || 
-          hookUpper.includes('SOLVES') || hookUpper.includes('GUARANTEE') ||
-          hookUpper.includes('DESIGNED') || hookUpper.includes('PERFECT')) {
-        strongHookCount = strongHookCount + 1
-      }
-    }
-  }
-  conversion = conversion + Math.min(strongHookCount * 2, 8)
-  
-  let benefitCount = 0
-  if (bullets) {
-    for (let i = 0; i < bullets.length; i++) {
-      const detail = bullets[i].detail || ''
-      const detailLower = detail.toLowerCase()
-      if (detailLower.includes('ensures') || detailLower.includes('provides') || 
-          detailLower.includes('delivers') || detailLower.includes('helps') ||
-          detailLower.includes('perfect for') || detailLower.includes('designed for')) {
-        benefitCount = benefitCount + 1
-      }
-    }
-  }
-  conversion = conversion + Math.min(benefitCount * 2, 6)
-  
-  if (descLower.includes('delivers') || descLower.includes('designed') || 
-      descLower.includes('built') || descLower.includes('crafted') ||
-      descLower.includes('ensures') || descLower.includes('provides')) {
-    conversion = conversion + 3
-  }
-  
-  const sentences = description.split(/[.!?]+/).filter(function(s) {
-    return s.trim().length > 0
-  })
-  
-  if (sentences.length > 0) {
-    let totalWords = 0
-    for (let i = 0; i < sentences.length; i++) {
-      totalWords = totalWords + sentences[i].split(' ').length
-    }
-    const avgLength = totalWords / sentences.length
-    
-    if (avgLength >= 12 && avgLength <= 20) {
-      readability = readability + 8
-    } else if (avgLength >= 8 && avgLength <= 25) {
-      readability = readability + 5
-    } else if (avgLength < 8) {
-      readability = readability + 3
-    }
-  }
-  
-  if (!hasVagueLanguage(description) && !hasVagueLanguage(title)) {
-    readability = readability + 5
-  }
-  
-  if (hasVagueLanguage(description) || hasVagueLanguage(title)) {
-    errors = errors - 8
-  }
-  
-  if (title.length > CHAR_LIMITS[marketplace].title) {
-    errors = errors - 15
-  }
-  
-  if (hasDuplicatePhrases(description)) {
-    errors = errors - 5
-  }
-  
-  if (bullets && bullets.length >= 4 && bullets.length <= 5) {
-    errors = errors + 3
-  }
-  
-  seo = Math.max(82, Math.min(98, seo))
-  conversion = Math.max(85, Math.min(97, conversion))
-  readability = Math.max(87, Math.min(98, readability))
-  errors = Math.max(88, Math.min(100, errors))
-  
-  return {
-    seoScore: seo,
-    conversionScore: conversion,
-    readabilityScore: readability,
-    errorScore: errors
-  }
-}
 
-function hasVagueLanguage(text) {
-  const lower = text.toLowerCase()
-  for (let i = 0; i < BLACKLIST.length; i++) {
-    if (lower.includes(BLACKLIST[i])) {
-      return true
-    }
-  }
-  return false
-}
-
-function hasDuplicatePhrases(text) {
-  const words = text.toLowerCase().split(/\s+/)
-  const bigrams = []
-  
-  for (let i = 0; i < words.length - 2; i++) {
-    const bigram = words[i] + ' ' + words[i + 1] + ' ' + words[i + 2]
-    bigrams.push(bigram)
-  }
-  
-  const uniqueBigrams = []
-  for (let i = 0; i < bigrams.length; i++) {
-    if (uniqueBigrams.indexOf(bigrams[i]) === -1) {
-      uniqueBigrams.push(bigrams[i])
-    }
-  }
-  
-  return uniqueBigrams.length < bigrams.length * 0.85
-}
-
-function cleanText(text) {
-  let cleaned = text
-  
-  for (let i = 0; i < BLACKLIST.length; i++) {
-    const phrase = BLACKLIST[i]
-    const regex = new RegExp(phrase, 'gi')
-    cleaned = cleaned.replace(regex, '')
-  }
-  
-  cleaned = cleaned.replace(/\s+/g, ' ')
-  cleaned = cleaned.trim()
-  cleaned = cleaned.replace(/[,;.]\s*[,;.]/g, '.')
-  
-  return cleaned
+  return (
+    <>
+      <Head>
+        <title>Dashboard - ListingWriter</title>
+      </Head>
+      <div style={{ minHeight: '100vh', background: '#0a0e1a', color: '#f3f4f6' }}>
+        <Header />
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Generate New Listing</h1>
+              <p style={{ color: '#9ca3af' }}>Just 3 simple fields - we'll handle the rest!</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <button onClick={() => isPro ? setShowCsvModal(true) : router.push('/pricing')} style={{ padding: '0.75rem 1.25rem', background: isPro ? 'rgba(16, 185, 129, 0.1)' : 'rgba(107, 114, 128, 0.1)', border: isPro ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(107, 114, 128, 0.3)', borderRadius: '0.5rem', color: isPro ? '#10b981' : '#6b7280', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+                {isPro ? '📂 Bulk CSV Upload' : '🔒 CSV Upload (Pro)'}
+              </button>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: '0.5rem', background: '#141824', border: '1px solid #1f2937' }}>
+                <span style={{ fontSize: '0.875rem', color: '#9ca3af' }}>{session.user.listingsUsed || 0} / {session.user.listingsLimit || 5}</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#10b981', textTransform: 'capitalize' }}>{session.user.tier || 'free'}</span>
+              </div>
+            </div>
+          </div>
+          {error && (
+            <div className="card" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
+                <span style={{ color: '#ef4444', fontSize: '1.25rem' }}>⚠️</span>
+                <div>
+                  <h3 style={{ fontWeight: 600, color: '#ef4444', marginBottom: '0.25rem' }}>Generation Failed</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#fca5a5' }}>{error}</p>
+                  {error.includes('Limit reached') && <button onClick={() => router.push('/pricing')} className="btn-primary" style={{ marginTop: '0.75rem', padding: '0.5rem 1rem', fontSize: '0.875rem' }}>Upgrade Plan</button>}
+                </div>
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
+            <div className="card">
+              <form onSubmit={handleGenerate} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1rem', borderRadius: '0.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: '#10b981', lineHeight: 1.6 }}>💡 <strong>Pro tip:</strong> Just give us the basics! Our AI engine will create marketplace-optimized listings with professional copy and perfect structure.</p>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem' }}>📍 Marketplace</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {['amazon', 'shopify', 'ebay'].map((m) => (
+                      <button key={m} type="button" onClick={() => setMarketplace(m)} style={{ flex: 1, padding: '0.75rem 1rem', borderRadius: '0.5rem', fontWeight: 600, textTransform: 'capitalize', fontSize: '0.875rem', background: marketplace === m ? '#10b981' : '#0a0e1a', color: marketplace === m ? '#0a0e1a' : '#9ca3af', border: marketplace === m ? 'none' : '1px solid #1f2937', cursor: 'pointer' }}>{m}</button>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>Title limit: {LIMITS[marketplace].title} characters</p>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>📦 Product Name *</label>
+                  <input type="text" required value={formData.productName} onChange={(e) => setFormData({ ...formData, productName: e.target.value })} placeholder="e.g., RFID Blocking Slim Leather Wallet" style={{ width: '100%', padding: '0.75rem 1rem', background: '#0a0e1a', border: `2px solid ${titleLength > LIMITS[marketplace].title ? '#ef4444' : '#1f2937'}`, borderRadius: '0.5rem', color: '#f3f4f6', fontSize: '0.875rem' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>What is it? Keep it simple and clear.</p>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 600, color: getCharCountColor(titleLength, LIMITS[marketplace].title) }}>{titleLength} / {LIMITS[marketplace].title}</p>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>⭐ Key Features</label>
+                  <textarea value={formData.features} onChange={(e) => setFormData({ ...formData, features: e.target.value })} placeholder="List your product's main features (one per line):&#10;&#10;RFID blocking technology&#10;Genuine Italian leather&#10;Ultra-slim 8mm design&#10;Holds 8-12 cards&#10;Quick-access slot" rows={6} style={{ width: '100%', padding: '0.75rem 1rem', background: '#0a0e1a', border: '2px solid #1f2937', borderRadius: '0.5rem', color: '#f3f4f6', fontSize: '0.875rem', resize: 'vertical', lineHeight: 1.6 }} />
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>One feature per line. AI will transform these into compelling benefits!</p>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>💰 Price Range</label>
+                  <select value={formData.pricePoint} onChange={(e) => setFormData({ ...formData, pricePoint: e.target.value })} style={{ width: '100%', padding: '0.75rem 1rem', background: '#0a0e1a', border: '2px solid #1f2937', borderRadius: '0.5rem', color: '#f3f4f6', fontSize: '0.875rem', cursor: 'pointer' }}>
+                    <option value="budget">Budget ($10-30) - Value-focused messaging</option>
+                    <option value="mid">Mid-Range ($30-100) - Quality + Value balance</option>
+                    <option value="premium">Premium ($100+) - Luxury positioning</option>
+                  </select>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>Helps us match the tone to your price point</p>
+                </div>
+                <button type="submit" disabled={loading || !formData.productName || titleLength > LIMITS[marketplace].title} className="btn-primary" style={{ padding: '1rem', fontSize: '1rem', opacity: (loading || !formData.productName || titleLength > LIMITS[marketplace].title) ? 0.5 : 1, cursor: (loading || !formData.productName || titleLength > LIMITS[marketplace].title) ? 'not-allowed' : 'pointer' }}>
+                  {loading ? '⚡ Generating with AI...' : '🚀 Generate Listing'}
+                </button>
+                {titleLength > LIMITS[marketplace].title && <p style={{ color: '#ef4444', fontSize: '0.875rem', textAlign: 'center', marginTop: '-0.5rem' }}>⚠️ Product name exceeds {marketplace} character limit!</p>}
+              </form>
+            </div>
+            <div className="card">
+              {result ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#10b981' }}>📊 Quality Scores</h3>
+                      {!isPro && <button onClick={() => router.push('/pricing')} style={{ padding: '0.35rem 0.85rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '0.375rem', color: '#10b981', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>⭐ Unlock Score Boost</button>}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                      {[
+                        { label: 'SEO', value: animatedScores.seo, target: result.seoScore, color: getScoreColor(result.seoScore), key: 'seo' },
+                        { label: 'Convert', value: animatedScores.conversion, target: result.conversionScore, color: getScoreColor(result.conversionScore), key: 'conversion' },
+                        { label: 'Readable', value: animatedScores.readability, target: result.readabilityScore, color: getScoreColor(result.readabilityScore), key: 'readability' },
+                        { label: 'Quality', value: animatedScores.errors, target: result.errorScore, color: getScoreColor(result.errorScore), key: 'quality' },
+                      ].map((score) => (
+                        <div key={score.label} style={{ textAlign: 'center', background: '#0a0e1a', padding: '0.75rem', borderRadius: '0.5rem', position: 'relative' }} onMouseEnter={() => setHoveredScore(score.key)} onMouseLeave={() => setHoveredScore(null)}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: score.color, marginBottom: '0.25rem' }}>{score.value}%</div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '0.65rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{score.label}</span>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', borderRadius: '50%', background: 'rgba(107, 114, 128, 0.2)', border: '1px solid rgba(107, 114, 128, 0.3)', fontSize: '0.6rem', fontWeight: 600, color: '#9ca3af', cursor: 'help' }}>i</div>
+                          </div>
+                          {score.target < 95 && (
+                            <button onClick={() => handleImproveScore(score.key)} disabled={improving === score.key || !isPro} style={{ width: '100%', padding: '0.25rem', background: isPro ? 'rgba(16, 185, 129, 0.1)' : 'rgba(107, 114, 128, 0.1)', border: isPro ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(107, 114, 128, 0.3)', borderRadius: '0.25rem', color: isPro ? '#10b981' : '#6b7280', fontSize: '0.65rem', cursor: isPro ? 'pointer' : 'not-allowed', fontWeight: 600, opacity: improving === score.key ? 0.5 : 1 }}>
+                              {improving === score.key ? '⏳ Boosting...' : isPro ? '🔄 Boost' : '🔒 Pro Only'}
+                            </button>
+                          )}
+                          {hoveredScore === score.key && (
+                            <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '0.5rem', padding: '0.75rem', background: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem', minWidth: '200px', maxWidth: '250px', fontSize: '0.75rem', lineHeight: 1.5, color: '#e5e7eb', zIndex: 10, boxShadow: '0 10px 25px rgba(0,0,0,0.5)', pointerEvents: 'none' }}>
+                              {scoreExplanations[score.key]}
+                              <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1f2937' }} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <h3 style={{ fontWeight: 600, fontSize: '0.875rem' }}>📝 SEO Title ({result.title.length} chars)</h3>
+                      <button onClick={() => copyToClipboard(result.title)} style={{ background: 'none', border: '1px solid #1f2937', padding: '0.25rem 0.75rem', borderRadius: '0.25rem', color: '#9ca3af', cursor: 'pointer', fontSize: '0.75rem' }}>📋 Copy</button>
+                    </div>
+                    <div style={{ background: '#0a0e1a', borderRadius: '0.5rem', padding: '1rem', fontSize: '0.875rem', lineHeight: 1.6 }}>{result.title}</div>
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <h3 style={{ fontWeight: 600, fontSize: '0.875rem' }}>🎯 Conversion Bullets</h3>
+                      <button onClick={() => copyToClipboard(result.bullets.map(b => `${b.hook}: ${b.detail}`).join('\n'))} style={{ background: 'none', border: '1px solid #1f2937', padding: '0.25rem 0.75rem', borderRadius: '0.25rem', color: '#9ca3af', cursor: 'pointer', fontSize: '0.75rem' }}>📋 Copy</button>
+                    </div>
+                    <div style={{ background: '#0a0e1a', borderRadius: '0.5rem', padding: '1rem' }}>
+                      <ul style={{ listStyle: 'none', padding: 0, fontSize: '0.875rem', lineHeight: 1.8 }}>
+                        {result.bullets.map((bullet, i) => (
+                          <li key={i} style={{ marginBottom: '0.75rem' }}><span style={{ fontWeight: 600, color: '#10b981' }}>{bullet.hook}:</span> {bullet.detail}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <h3 style={{ fontWeight: 600, fontSize: '0.875rem' }}>📖 Description ({result.description.length} chars)</h3>
+                      <button onClick={() => copyToClipboard(result.description)} style={{ background: 'none', border: '1px solid #1f2937', padding: '0.25rem 0.75rem', borderRadius: '0.25rem', color: '#9ca3af', cursor: 'pointer', fontSize: '0.75rem' }}>📋 Copy</button>
+                    </div>
+                    <div style={{ background: '#0a0e1a', borderRadius: '0.5rem', padding: '1rem', fontSize: '0.875rem', lineHeight: 1.6 }}>{result.description}</div>
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <h3 style={{ fontWeight: 600, fontSize: '0.875rem' }}>🏷️ SEO Meta Data</h3>
+                      <button onClick={() => copyToClipboard(`Meta: ${result.metaData.metaDescription}\nKeywords: ${result.metaData.keywords}\nSlug: ${result.metaData.urlSlug}`)} style={{ background: 'none', border: '1px solid #1f2937', padding: '0.25rem 0.75rem', borderRadius: '0.25rem', color: '#9ca3af', cursor: 'pointer', fontSize: '0.75rem' }}>📋 Copy</button>
+                    </div>
+                    <div style={{ background: '#0a0e1a', borderRadius: '0.5rem', padding: '1rem', fontSize: '0.75rem', lineHeight: 1.6 }}>
+                      <p style={{ marginBottom: '0.5rem' }}><strong>Meta Description:</strong> {result.metaData.metaDescription}</p>
+                      <p style={{ marginBottom: '0.5rem' }}><strong>Keywords:</strong> {result.metaData.keywords}</p>
+                      <p><strong>URL Slug:</strong> {result.metaData.urlSlug}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <h3 style={{ fontWeight: 600, fontSize: '0.875rem' }}>💻 HTML Output</h3>
+                      <button onClick={() => copyToClipboard(result.htmlOutput)} style={{ background: 'none', border: '1px solid #1f2937', padding: '0.25rem 0.75rem', borderRadius: '0.25rem', color: '#9ca3af', cursor: 'pointer', fontSize: '0.75rem' }}>📋 Copy</button>
+                    </div>
+                    <div style={{ background: '#0a0e1a', borderRadius: '0.5rem', padding: '1rem', overflowX: 'auto' }}>
+                      <pre style={{ fontSize: '0.7rem', color: '#9ca3af', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{result.htmlOutput}</pre>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '4rem 1.25rem', color: '#9ca3af' }}>
+                  <div style={{ fontSize: '4rem', opacity: 0.2, marginBottom: '1rem' }}>⚡</div>
+                  <p style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>Ready to generate!</p>
+                  <p style={{ fontSize: '0.875rem' }}>Fill in the 3 fields and hit generate</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      {showCsvModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }} onClick={() => !csvProcessing && setShowCsvModal(false)}>
+          <div className="card" style={{ maxWidth: '600px', width: '100%', maxHeight: '80vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>📂 Bulk CSV Upload</h2>
+              {!csvProcessing && <button onClick={() => setShowCsvModal(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.5rem', cursor: 'pointer', padding: '0.25rem' }}>×</button>}
+            </div>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                <p style={{ fontSize: '0.875rem', color: '#60a5fa', lineHeight: 1.6, marginBottom: '0.75rem' }}><strong>CSV Format:</strong> Your file should have these columns:</p>
+                <pre style={{ fontSize: '0.75rem', color: '#93c5fd', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '0.375rem', overflowX: 'auto' }}>Product Name,Features,Price Point{'\n'}RFID Wallet,"RFID blocking{'\n'}Italian leather{'\n'}Slim design",mid{'\n'}Yoga Mat,"Non-slip surface{'\n'}Eco-friendly{'\n'}6mm thick",budget</pre>
+                <p style={{ fontSize: '0.75rem', color: '#93c5fd', marginTop: '0.5rem' }}>Price Point options: budget, mid, premium</p>
+              </div>
+              <label style={{ display: 'block', marginBottom: '1rem' }}>
+                <div style={{ border: '2px dashed #1f2937', borderRadius: '0.5rem', padding: '2rem', textAlign: 'center', cursor: 'pointer', background: csvFile ? 'rgba(16, 185, 129, 0.1)' : '#0a0e1a' }} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const file = e.dataTransfer.files[0]; if (file) handleCsvUpload({ target: { files: [file] } }) }}>
+                  <input type="file" accept=".csv" onChange={handleCsvUpload} disabled={csvProcessing} style={{ display: 'none' }} />
+                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>{csvFile ? '✅' : '📁'}</div>
+                  <p style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '0.25rem' }}>{csvFile ? csvFile.name : 'Click to upload or drag & drop'}</p>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>CSV files only</p>
+                </div>
+              </label>
+              {csvFile && !csvProcessing && !csvResults.length && <button onClick={processCsvFile} className="btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1rem' }}>🚀 Generate All Listings</button>}
+              {csvProcessing && (
+                <div style={{ marginTop: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.875rem', color: '#9ca3af' }}>Processing...</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#10b981' }}>{csvProgress}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', background: '#1f2937', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${csvProgress}%`, height: '100%', background: 'linear-gradient(90deg, #10b981, #34d399)', transition: 'width 0.3s' }} />
+                  </div>
+                </div>
+              )}
+              {csvResults.length > 0 && (
+                <div style={{ marginTop: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>✅ Generated {csvResults.filter(r => r.success).length} / {csvResults.length}</h3>
+                    <button onClick={downloadCsvResults} style={{ padding: '0.5rem 1rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '0.375rem', color: '#10b981', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>📥 Download Results</button>
+                  </div>
+                  <div style={{ maxHeight: '300px', overflowY: 'auto', background: '#0a0e1a', borderRadius: '0.5rem', padding: '1rem' }}>
+                    {csvResults.map((result, i) => (
+                      <div key={i} style={{ padding: '0.75rem', marginBottom: '0.5rem', background: result.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: `1px solid ${result.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`, borderRadius: '0.375rem', fontSize: '0.875rem' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{result.success ? '✅' : '❌'} {result.productName}</div>
+                        {!result.success && <div style={{ fontSize: '0.75rem', color: '#fca5a5' }}>Error: {result.error}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
