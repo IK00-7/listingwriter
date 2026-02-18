@@ -79,7 +79,7 @@ export default function Pricing() {
         'Custom integrations available',
       ],
       limitations: [],
-      cta: 'Contact Sales',
+      cta: 'Upgrade to Business',
       popular: false
     }
   }
