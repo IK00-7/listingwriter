@@ -79,20 +79,18 @@ export default function Success() {
     const data = await res.json()
     if (data.url) window.location.href = data.url
   }}
-                style={{ 
-                  padding: '1rem 2rem', 
-                  fontSize: '1rem', 
-                  background: 'rgba(16, 185, 129, 0.1)', 
-                  border: '1px solid rgba(16, 185, 129, 0.3)', 
-                  borderRadius: '0.5rem', 
-                  color: '#10b981', 
-                  textDecoration: 'none', 
-                  display: 'inline-block',
-                  cursor: 'pointer'
-                }}
-              >
-                📊 Manage Subscription
-              </button>
+  style={{ 
+    padding: '1rem 2rem', 
+    fontSize: '1rem', 
+    background: 'rgba(16, 185, 129, 0.1)', 
+    border: '1px solid rgba(16, 185, 129, 0.3)', 
+    borderRadius: '0.5rem', 
+    color: '#10b981', 
+    cursor: 'pointer'
+  }}
+>
+  📊 Manage Subscription
+</button>
             </div>
 
             <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '2rem' }}>
