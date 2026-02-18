@@ -102,9 +102,37 @@ export default function Pricing() {
     }
     
     if (planKey === 'business') {
-      setShowContactForm(true)
-      return
+  if (!session) {
+    router.push('/')
+    return
+  }
+
+  setLoading('business')
+
+  try {
+    const res = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        priceId: process.env.NEXT_PUBLIC_STRIPE_BUSINESS_PRICE_ID,
+        tier: 'business'
+      }),
+    })
+
+    const data = await res.json()
+
+    if (data.url) {
+      window.location.href = data.url
+    } else {
+      throw new Error('No checkout URL returned')
     }
+  } catch (error) {
+    console.error('Checkout error:', error)
+    alert('Failed to start checkout. Please try again.')
+    setLoading(null)
+  }
+  return
+}
     
     if (planKey === 'pro') {
       if (!session) {
