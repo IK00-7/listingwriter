@@ -92,7 +92,7 @@ export default function Success() {
                 }}
               >
                 📊 Manage Subscription
-              </a>
+              </button>
             </div>
 
             <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '2rem' }}>
