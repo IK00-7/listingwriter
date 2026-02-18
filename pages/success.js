@@ -73,10 +73,12 @@ export default function Success() {
                   🚀 Start Creating Listings
                 </a>
               </Link>
-              <a 
-                href="https://billing.stripe.com/p/login/test_xxxxx"
-                target="_blank"
-                rel="noopener noreferrer"
+             <button
+  onClick={async () => {
+    const res = await fetch('/api/customer-portal', { method: 'POST' })
+    const data = await res.json()
+    if (data.url) window.location.href = data.url
+  }}
                 style={{ 
                   padding: '1rem 2rem', 
                   fontSize: '1rem', 
