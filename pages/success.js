@@ -9,13 +9,34 @@ export default function Success() {
   const router = useRouter()
   const { data: session } = useSession()
   const [loading, setLoading] = useState(true)
+  const [portalLoading, setPortalLoading] = useState(false)
 
   useEffect(() => {
-    // Simulate checking payment status
     setTimeout(() => {
       setLoading(false)
     }, 2000)
   }, [])
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true)
+    try {
+      const res = await fetch('/api/customer-portal', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert('Failed to open subscription portal')
+        setPortalLoading(false)
+      }
+    } catch (error) {
+      console.error('Portal error:', error)
+      alert('Failed to open subscription portal')
+      setPortalLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -73,24 +94,22 @@ export default function Success() {
                   🚀 Start Creating Listings
                 </a>
               </Link>
-             <button
-  onClick={async () => {
-    const res = await fetch('/api/customer-portal', { method: 'POST' })
-    const data = await res.json()
-    if (data.url) window.location.href = data.url
-  }}
-  style={{ 
-    padding: '1rem 2rem', 
-    fontSize: '1rem', 
-    background: 'rgba(16, 185, 129, 0.1)', 
-    border: '1px solid rgba(16, 185, 129, 0.3)', 
-    borderRadius: '0.5rem', 
-    color: '#10b981', 
-    cursor: 'pointer'
-  }}
->
-  📊 Manage Subscription
-</button>
+              <button
+                onClick={handleManageSubscription}
+                disabled={portalLoading}
+                style={{ 
+                  padding: '1rem 2rem', 
+                  fontSize: '1rem', 
+                  background: 'rgba(16, 185, 129, 0.1)', 
+                  border: '1px solid rgba(16, 185, 129, 0.3)', 
+                  borderRadius: '0.5rem', 
+                  color: '#10b981', 
+                  cursor: portalLoading ? 'not-allowed' : 'pointer',
+                  opacity: portalLoading ? 0.5 : 1
+                }}
+              >
+                {portalLoading ? '⏳ Loading...' : '📊 Manage Subscription'}
+              </button>
             </div>
 
             <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '2rem' }}>
