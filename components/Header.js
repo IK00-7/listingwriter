@@ -57,6 +57,22 @@ export default function Header() {
                 </a>
               </Link>
 
+              <Link href="/history">
+                <a style={{ 
+                  color: router.pathname === '/history' ? '#10b981' : '#9ca3af',
+                  textDecoration: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  transition: 'color 0.2s',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => e.target.style.color = '#10b981'}
+                onMouseLeave={(e) => e.target.style.color = router.pathname === '/history' ? '#10b981' : '#9ca3af'}
+                >
+                  History
+                </a>
+              </Link>
+
               <Link href="/pricing">
                 <a style={{ 
                   color: router.pathname === '/pricing' ? '#10b981' : '#9ca3af',
