@@ -11,6 +11,11 @@ export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState('monthly')
   const [showContactForm, setShowContactForm] = useState(false)
   const [loading, setLoading] = useState(null)
+  useEffect(() => {
+    if (session) {
+      update()
+    }
+  }, [session])
   const [contactForm, setContactForm] = useState({
     name: '',
     email: '',
