@@ -135,48 +135,54 @@ export default function Dashboard() {
       return
     }
     setImproving(scoreType)
-    const improvementPrompts = {
-  seo: `CRITICAL SEO OPTIMIZATION TASK:
-- Use the main product keyword AT LEAST 3 times naturally
-- Include 5+ related search terms people actually use
-- Put the main keyword in the FIRST 10 words of the title
-- Add long-tail keywords in bullets
-- Use semantic keywords (synonyms, related terms)
-- Optimize for "how to" and "best" search queries
-- Make it rank #1 on Amazon/Google search`,
+    // REPLACE the improvementPrompts in dashboard.js with these BALANCED prompts:
 
-  conversion: `CRITICAL CONVERSION OPTIMIZATION TASK:
-- Add URGENCY: "Limited time", "While supplies last", "Today only"
-- Add SOCIAL PROOF: "Thousands of 5-star reviews", "Best seller"
-- Add GUARANTEES: "100% satisfaction guaranteed", "30-day returns"
-- Use POWER WORDS: "Guaranteed", "Proven", "Instant", "Easy"
-- Include SPECIFIC NUMBERS: "Saves 3 hours", "Lasts 5+ years"
-- Address PAIN POINTS directly
-- End with STRONG call-to-action
-- Make every bullet focus on BENEFITS not features`,
+const improvementPrompts = {
+  seo: `Improve SEO score while maintaining readability and conversion power:
+- Naturally integrate the product name 2-3 times in title and bullets
+- Add 3-5 related search keywords that flow naturally
+- Include one long-tail keyword phrase customers actually search
+- Use semantic variations (e.g., "wallet" → "billfold", "card holder")
+- Keep the language clear and benefit-focused
+- Maintain the same persuasive tone
+- Don't sacrifice readability for keywords
+GOAL: Increase SEO score by 5-10 points WITHOUT decreasing other scores`,
 
-  readability: `CRITICAL READABILITY OPTIMIZATION TASK:
-- Use SIMPLE words (5th grade reading level)
-- Keep sentences UNDER 15 words each
-- Use SHORT paragraphs (2-3 sentences max)
-- Remove ALL jargon and technical terms
-- Use bullet points effectively
-- Add MORE white space
-- Make it SCANNABLE
-- Use active voice only
-- Remove complex sentences`,
+  conversion: `Improve conversion score while keeping SEO and readability strong:
+- Add ONE specific benefit with a number (e.g., "saves 30 minutes daily")
+- Include ONE social proof element (e.g., "trusted by thousands")
+- Add ONE guarantee or risk-reversal (e.g., "30-day money-back")
+- Use ONE power word naturally (Guaranteed, Proven, Certified, Premium)
+- Keep all existing keywords intact
+- Maintain simple, scannable language
+- Don't add fluff or marketing hype
+GOAL: Increase conversion score by 5-10 points WITHOUT decreasing other scores`,
 
-  quality: `CRITICAL QUALITY OPTIMIZATION TASK:
-- Fix ALL grammar and spelling errors
-- Ensure PERFECT punctuation
-- Make formatting FLAWLESS
-- Remove ALL vague words (amazing, great, best)
-- Be ULTRA SPECIFIC with measurements, numbers, facts
-- Ensure consistency in tone
-- Remove redundancy
-- Make every word count
-- Polish to PERFECTION`
+  readability: `Improve readability score while maintaining SEO keywords and persuasion:
+- Shorten 2-3 sentences to under 15 words each
+- Replace 2-3 complex words with simpler alternatives
+- Break one long bullet into two shorter ones
+- Use more active voice
+- Keep ALL product keywords and search terms
+- Maintain ALL benefit-focused language
+- Don't remove important details
+GOAL: Increase readability score by 5-10 points WITHOUT decreasing other scores`,
+
+  quality: `Polish the listing to perfection while maintaining all strengths:
+- Fix any grammar, spelling, or punctuation errors
+- Remove any vague words (replace "great" with specific benefits)
+- Ensure consistent capitalization and formatting
+- Make numbers and measurements more specific
+- Tighten up any repetitive phrasing
+- Keep ALL keywords for SEO
+- Keep ALL persuasive elements for conversion
+- Keep ALL simple, clear language for readability
+GOAL: Increase quality score to 95+ WITHOUT decreasing other scores`
 }
+
+// The key difference:
+// OLD: "Focus HEAVILY on X" (too aggressive, sacrifices other scores)
+// NEW: "Improve X while maintaining Y and Z" (balanced, all scores stay high)
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
