@@ -112,7 +112,7 @@ export default function Home() {
     
     <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
       <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-        Why ListingWriter <span style={{ color: '#10b981' }}>Destroys</span> ChatGPT
+        Why ListingWriter <span style={{ color: '#10b981' }}>Beats</span> ChatGPT
       </h2>
       <p style={{ fontSize: '1.25rem', color: '#9ca3af' }}>
         Stop wasting hours prompting ChatGPT. We've done the hard work for you.
