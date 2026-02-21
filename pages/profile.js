@@ -18,17 +18,30 @@ export default function Profile() {
   }, [status, router])
 
   useEffect(() => {
-    // Simulate fetching recent listings
-    // In production, you'd fetch from /api/get-listings
-    setTimeout(() => {
-      setRecentListings([
-        { id: 1, name: 'RFID Blocking Wallet', marketplace: 'Amazon', date: '2 hours ago' },
-        { id: 2, name: 'Yoga Mat Premium', marketplace: 'Shopify', date: '1 day ago' },
-        { id: 3, name: 'Phone Case Leather', marketplace: 'eBay', date: '2 days ago' },
-      ])
-      setLoadingListings(false)
-    }, 1000)
-  }, [])
+  if (session) {
+    fetchRecentListings()
+  }
+}, [session])
+
+const fetchRecentListings = async () => {
+  setLoadingListings(true)
+  try {
+    const res = await fetch('/api/get-listings')
+    const data = await res.json()
+    
+    if (data.listings) {
+      // Get last 10 listings
+      setRecentListings(data.listings.slice(0, 10))
+    } else {
+      setRecentListings([])
+    }
+  } catch (error) {
+    console.error('Error fetching listings:', error)
+    setRecentListings([])
+  } finally {
+    setLoadingListings(false)
+  }
+}
 
   if (status === 'loading') {
     return (
