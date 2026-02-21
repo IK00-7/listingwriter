@@ -137,7 +137,7 @@ if (session?.user) {
     }
   }
 
-  const handleImproveScore = async (scoreType) => {
+const handleImproveScore = async (scoreType) => {
   if (!isPro) {
     router.push('/pricing')
     return
