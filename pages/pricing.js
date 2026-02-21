@@ -4,7 +4,22 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
 import Header from '../components/Header'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/router'
+import { useState, useEffect } from 'react'  // Add useEffect if not there
 
+export default function Pricing() {
+  const { data: session, status, update } = useSession()  // Add "update"
+  const router = useRouter()
+  
+  // ADD THIS - Force refresh session when page loads
+  useEffect(() => {
+    if (session) {
+      update()  // This refreshes the session from the server
+    }
+  }, [])
+  
+  // Rest of your existing code...
 export default function Pricing() {
   const { data: session } = useSession()
   const router = useRouter()
