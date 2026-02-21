@@ -144,48 +144,46 @@ if (session?.user) {
     }
     setImproving(scoreType)
     // REPLACE the improvementPrompts in dashboard.js with these BALANCED prompts:
+    setResult(data)
 
+// ADD THESE LINES ↓
+if (session?.user) {
+  session.user.listingsUsed = (session.user.listingsUsed || 0) + 1
+  setUsageUpdated(true)
+  setTimeout(() => setUsageUpdated(false), 1500)
+}
 const improvementPrompts = {
-  seo: `Improve SEO score while maintaining readability and conversion power:
-- Naturally integrate the product name 2-3 times in title and bullets
-- Add 3-5 related search keywords that flow naturally
-- Include one long-tail keyword phrase customers actually search
-- Use semantic variations (e.g., "wallet" → "billfold", "card holder")
-- Keep the language clear and benefit-focused
-- Maintain the same persuasive tone
-- Don't sacrifice readability for keywords
-GOAL: Increase SEO score by 5-10 points WITHOUT decreasing other scores`,
+  seo: `You are optimizing for SEO. The current SEO score is low. Your MANDATORY tasks:
+1. Use the main product keyword EXACTLY 4 times in title and bullets
+2. Add these 5 keyword variations: [product type, product category, use case, material, benefit]
+3. Put product keyword in the FIRST 8 words of the title
+4. Add 2 long-tail keyword phrases (e.g., "best [product] for [use]")
+5. Keep conversion and readability high
+CRITICAL: The SEO score MUST increase by at least 10 points. Current SEO is too low.`,
 
-  conversion: `Improve conversion score while keeping SEO and readability strong:
-- Add ONE specific benefit with a number (e.g., "saves 30 minutes daily")
-- Include ONE social proof element (e.g., "trusted by thousands")
-- Add ONE guarantee or risk-reversal (e.g., "30-day money-back")
-- Use ONE power word naturally (Guaranteed, Proven, Certified, Premium)
-- Keep all existing keywords intact
-- Maintain simple, scannable language
-- Don't add fluff or marketing hype
-GOAL: Increase conversion score by 5-10 points WITHOUT decreasing other scores`,
+  conversion: `You are optimizing for conversion. The current conversion score is low. Your MANDATORY tasks:
+1. Add EXACTLY 3 specific numbers with benefits (e.g., "Saves 45 minutes daily", "Lasts 10+ years")
+2. Add social proof: "Join 50,000+ satisfied customers" or "4.8★ rating from 2,000+ reviews"
+3. Add guarantee: "100% satisfaction guaranteed or money back"
+4. Use these power words: Guaranteed, Proven, Certified, Premium (pick 2)
+5. Every bullet MUST start with a benefit, not a feature
+CRITICAL: The conversion score MUST increase by at least 10 points. Focus on urgency and proof.`,
 
-  readability: `Improve readability score while maintaining SEO keywords and persuasion:
-- Shorten 2-3 sentences to under 15 words each
-- Replace 2-3 complex words with simpler alternatives
-- Break one long bullet into two shorter ones
-- Use more active voice
-- Keep ALL product keywords and search terms
-- Maintain ALL benefit-focused language
-- Don't remove important details
-GOAL: Increase readability score by 5-10 points WITHOUT decreasing other scores`,
+  readability: `You are optimizing for readability. The current readability score is low. Your MANDATORY tasks:
+1. ALL sentences must be under 12 words (currently too long)
+2. Replace ALL complex words with 5th grade level words
+3. Remove ALL jargon and technical terms
+4. Use simple, active voice only
+5. Break long bullets into shorter ones
+CRITICAL: The readability score MUST increase by at least 10 points. Make it scannable.`,
 
-  quality: `Polish the listing to perfection while maintaining all strengths:
-- Fix any grammar, spelling, or punctuation errors
-- Remove any vague words (replace "great" with specific benefits)
-- Ensure consistent capitalization and formatting
-- Make numbers and measurements more specific
-- Tighten up any repetitive phrasing
-- Keep ALL keywords for SEO
-- Keep ALL persuasive elements for conversion
-- Keep ALL simple, clear language for readability
-GOAL: Increase quality score to 95+ WITHOUT decreasing other scores`
+  quality: `You are optimizing for quality/error score. The current quality score is low. Your MANDATORY tasks:
+1. Check and fix ALL grammar, spelling, punctuation errors
+2. Remove these vague words: amazing, great, best, perfect, excellent (replace with specifics)
+3. Add specific measurements: "8mm thin" not "slim", "weighs 4oz" not "lightweight"
+4. Ensure perfect consistency in capitalization and style
+5. Remove any repetitive phrasing
+CRITICAL: The quality score MUST increase by at least 10 points. Zero errors allowed.`
 }
     try {
       const res = await fetch('/api/generate', {
