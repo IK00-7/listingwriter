@@ -357,7 +357,7 @@ const handleImproveScore = async (scoreType) => {
     </div>
   )}
   <span style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
-    {session.user.listingsUsed || 0} / {session.user.listingsLimit || 5}
+  {session.user.listingsUsed || 0} / {session.user.tier === 'business' ? '∞' : (session.user.listingsLimit || 5)}
   </span>
   <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#10b981', textTransform: 'capitalize' }}>
     {session.user.tier || 'free'}
