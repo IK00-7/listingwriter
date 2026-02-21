@@ -43,6 +43,7 @@ export default function Success() {
       <>
         <Head>
           <title>Processing Payment - ListingWriter</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
         </Head>
         <div style={{ minHeight: '100vh', background: '#0a0e1a', color: '#f3f4f6' }}>
           <Header />
@@ -58,39 +59,73 @@ export default function Success() {
     )
   }
 
+  // Get the user's tier (defaults to 'pro' if not set yet)
+  const userTier = session?.user?.tier || 'pro'
+  const tierName = userTier === 'business' ? 'Business' : 'Pro'
+  const tierEmoji = userTier === 'business' ? '💼' : '🚀'
+  const tierColor = userTier === 'business' ? '#8b5cf6' : '#10b981'
+
+  // Features based on tier
+  const features = userTier === 'business' ? [
+    'Unlimited AI-generated listings',
+    'Unlimited score improvements',
+    'Unlimited CSV bulk uploads',
+    'Full listing history & analytics',
+    'API access',
+    '24/7 Priority support'
+  ] : [
+    '50 AI-generated listings per month',
+    'Score improvement regeneration',
+    'CSV bulk upload (up to 50 products)',
+    'Listing history & management',
+    'Priority support'
+  ]
+
   return (
     <>
       <Head>
-        <title>Welcome to Pro! - ListingWriter</title>
+        <title>Welcome to {tierName}! - ListingWriter</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
       </Head>
       <div style={{ minHeight: '100vh', background: '#0a0e1a', color: '#f3f4f6' }}>
         <Header />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 80px)', padding: '2rem' }}>
           <div className="card" style={{ maxWidth: '600px', textAlign: 'center', padding: '3rem 2rem' }}>
-            <div style={{ fontSize: '5rem', marginBottom: '1.5rem' }}>🎉</div>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#10b981' }}>
-              Welcome to Pro!
+            <div style={{ fontSize: '5rem', marginBottom: '1.5rem' }}>{tierEmoji}</div>
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', color: tierColor }}>
+              Welcome to {tierName}!
             </h1>
             <p style={{ fontSize: '1.125rem', color: '#9ca3af', marginBottom: '2rem', lineHeight: 1.6 }}>
-              Your payment was successful! You now have access to all Pro features including score improvements, CSV bulk upload, and 50 listings per month.
+              Your payment was successful! You now have access to all {tierName} features.
             </p>
             
-            <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '0.5rem', padding: '1.5rem', marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#10b981', marginBottom: '1rem' }}>
+            <div style={{ 
+              background: `${tierColor}15`, 
+              border: `1px solid ${tierColor}40`, 
+              borderRadius: '0.5rem', 
+              padding: '1.5rem', 
+              marginBottom: '2rem' 
+            }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: tierColor, marginBottom: '1rem' }}>
                 What's unlocked:
               </h3>
               <ul style={{ listStyle: 'none', padding: 0, textAlign: 'left', fontSize: '0.875rem', lineHeight: 2, color: '#d1d5db' }}>
-                <li>✓ 50 AI-generated listings per month</li>
-                <li>✓ Score improvement regeneration</li>
-                <li>✓ CSV bulk upload (up to 50 products)</li>
-                <li>✓ Listing history & management</li>
-                <li>✓ Priority support</li>
+                {features.map((feature, index) => (
+                  <li key={index}>✓ {feature}</li>
+                ))}
               </ul>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link href="/dashboard">
-                <a className="btn-primary" style={{ padding: '1rem 2rem', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
+                <a className="btn-primary" style={{ 
+                  padding: '1rem 2rem', 
+                  fontSize: '1rem', 
+                  textDecoration: 'none', 
+                  display: 'inline-block',
+                  background: tierColor,
+                  color: '#fff'
+                }}>
                   🚀 Start Creating Listings
                 </a>
               </Link>
@@ -100,10 +135,10 @@ export default function Success() {
                 style={{ 
                   padding: '1rem 2rem', 
                   fontSize: '1rem', 
-                  background: 'rgba(16, 185, 129, 0.1)', 
-                  border: '1px solid rgba(16, 185, 129, 0.3)', 
+                  background: `${tierColor}15`, 
+                  border: `1px solid ${tierColor}40`, 
                   borderRadius: '0.5rem', 
-                  color: '#10b981', 
+                  color: tierColor, 
                   cursor: portalLoading ? 'not-allowed' : 'pointer',
                   opacity: portalLoading ? 0.5 : 1
                 }}
