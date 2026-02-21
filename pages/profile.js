@@ -7,51 +7,56 @@ import Header from '../components/Header'
 export default function Profile() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  
+  // Client-side mounting check
+  const [mounted, setMounted] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
   const [recentListings, setRecentListings] = useState([])
   const [loadingListings, setLoadingListings] = useState(true)
 
+  // Set mounted on client
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    setMounted(true)
+  }, [])
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (mounted && status === 'unauthenticated') {
       router.push('/')
     }
-  }, [status, router])
+  }, [mounted, status, router])
 
+  // Fetch listings only after mounted and authenticated
   useEffect(() => {
-  if (session) {
-    fetchRecentListings()
-  }
-}, [session])
-
-const fetchRecentListings = async () => {
-  setLoadingListings(true)
-  try {
-    const res = await fetch('/api/get-listings')
-    const data = await res.json()
-    
-    if (data.listings) {
-      // Get last 10 listings
-      setRecentListings(data.listings.slice(0, 10))
-    } else {
-      setRecentListings([])
+    if (mounted && session?.user?.email) {
+      fetchRecentListings()
     }
-  } catch (error) {
-    console.error('Error fetching listings:', error)
-    setRecentListings([])
-  } finally {
-    setLoadingListings(false)
-  }
-}
+  }, [mounted, session])
 
-  if (status === 'loading') {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0a0e1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
-          <p style={{ color: '#9ca3af' }}>Loading...</p>
-        </div>
-      </div>
-    )
+  const fetchRecentListings = async () => {
+    setLoadingListings(true)
+    try {
+      const res = await fetch('/api/get-listings')
+      
+      if (!res.ok) {
+        console.error('API error:', res.status)
+        setRecentListings([])
+        return
+      }
+      
+      const data = await res.json()
+      
+      if (data.listings && Array.isArray(data.listings)) {
+        setRecentListings(data.listings.slice(0, 10))
+      } else {
+        setRecentListings([])
+      }
+    } catch (error) {
+      console.error('Error fetching listings:', error)
+      setRecentListings([])
+    } finally {
+      setLoadingListings(false)
+    }
   }
 
   const handleManageSubscription = async () => {
@@ -75,6 +80,26 @@ const fetchRecentListings = async () => {
     }
   }
 
+  // Don't render until mounted (prevents hydration mismatch)
+  if (!mounted) {
+    return null
+  }
+
+  if (status === 'loading') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0e1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
+          <p style={{ color: '#9ca3af' }}>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return null
+  }
+
   const tierInfo = {
     free: { name: 'Free', color: '#6b7280', emoji: '🆓', price: '$0/month' },
     pro: { name: 'Pro', color: '#10b981', emoji: '🚀', price: '$29/month' },
@@ -92,15 +117,16 @@ const fetchRecentListings = async () => {
   }
 
   const marketplaceEmojis = {
-    Amazon: '📦',
-    Shopify: '🛍️',
-    eBay: '🏷️'
+    amazon: '📦',
+    shopify: '🛍️',
+    ebay: '🏷️'
   }
 
   return (
     <>
       <Head>
         <title>Profile - ListingWriter</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
       </Head>
 
       <div style={{ minHeight: '100vh', background: '#0a0e1a', color: '#f3f4f6' }}>
@@ -113,7 +139,7 @@ const fetchRecentListings = async () => {
             <p style={{ color: '#9ca3af' }}>Manage your profile and subscription</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+          <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
             
             <div className="card">
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -276,9 +302,9 @@ const fetchRecentListings = async () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {recentListings.map((listing) => (
+                {recentListings.map((listing, index) => (
                   <div 
-                    key={listing.id}
+                    key={listing.id || index}
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -292,14 +318,14 @@ const fetchRecentListings = async () => {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <div style={{ fontSize: '1.5rem' }}>
-                        {marketplaceEmojis[listing.marketplace] || '📦'}
+                        {marketplaceEmojis[listing.marketplace?.toLowerCase()] || '📦'}
                       </div>
                       <div>
                         <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
-                          {listing.name}
+                          {listing.product_name || 'Untitled'}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                          {listing.marketplace} • {listing.date}
+                        <div style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'capitalize' }}>
+                          {listing.marketplace || 'unknown'} • {new Date(listing.created_at).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
