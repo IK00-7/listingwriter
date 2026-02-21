@@ -217,19 +217,19 @@ const fetchRecentListings = async () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                 <div style={{ textAlign: 'center', padding: '0.75rem', background: '#141824', borderRadius: '0.5rem' }}>
                   <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>
-                    {recentListings.filter(l => l.marketplace === 'Amazon').length}
+                    {recentListings.filter(l => l.marketplace?.toLowerCase() === 'amazon').length}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '0.25rem' }}>Amazon</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: '0.75rem', background: '#141824', borderRadius: '0.5rem' }}>
                   <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>
-                    {recentListings.filter(l => l.marketplace === 'Shopify').length}
+                    {recentListings.filter(l => l.marketplace?.toLowerCase() === 'shopify').length}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '0.25rem' }}>Shopify</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: '0.75rem', background: '#141824', borderRadius: '0.5rem' }}>
                   <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>
-                    {recentListings.filter(l => l.marketplace === 'eBay').length}
+                    {recentListings.filter(l => l.marketplace?.toLowerCase() === 'ebay').length}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '0.25rem' }}>eBay</div>
                 </div>
