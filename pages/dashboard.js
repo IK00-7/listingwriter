@@ -19,7 +19,7 @@ export default function Dashboard() {
   const [csvProcessing, setCsvProcessing] = useState(false)
   const [csvResults, setCsvResults] = useState([])
   const [csvProgress, setCsvProgress] = useState(0)
-
+  const [usageUpdated, setUsageUpdated] = useState(false)
   const [animatedScores, setAnimatedScores] = useState({
     seo: 0,
     conversion: 0,
@@ -122,6 +122,14 @@ export default function Dashboard() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to generate listing')
       setResult(data)
+
+// ADD THESE LINES ↓
+if (session?.user) {
+  session.user.listingsUsed = (session.user.listingsUsed || 0) + 1
+  setUsageUpdated(true)
+  setTimeout(() => setUsageUpdated(false), 1500)
+}
+      
     } catch (err) {
       setError(err.message)
     } finally {
@@ -179,10 +187,6 @@ GOAL: Increase readability score by 5-10 points WITHOUT decreasing other scores`
 - Keep ALL simple, clear language for readability
 GOAL: Increase quality score to 95+ WITHOUT decreasing other scores`
 }
-
-// The key difference:
-// OLD: "Focus HEAVILY on X" (too aggressive, sacrifices other scores)
-// NEW: "Improve X while maintaining Y and Z" (balanced, all scores stay high)
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -295,8 +299,24 @@ GOAL: Increase quality score to 95+ WITHOUT decreasing other scores`
   return (
     <>
       <Head>
-        <title>Dashboard - ListingWriter</title>
-      </Head>
+  <title>Dashboard - ListingWriter</title>
+  <style>{`
+    @keyframes fadeInOut {
+      0% {
+        opacity: 0;
+        transform: scale(0.5) translateY(10px);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.1) translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.8) translateY(-10px);
+      }
+    }
+  `}</style>
+</Head>
       <div style={{ minHeight: '100vh', background: '#0a0e1a', color: '#f3f4f6' }}>
         <Header />
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
@@ -309,10 +329,46 @@ GOAL: Increase quality score to 95+ WITHOUT decreasing other scores`
               <button onClick={() => isPro ? setShowCsvModal(true) : router.push('/pricing')} style={{ padding: '0.75rem 1.25rem', background: isPro ? 'rgba(16, 185, 129, 0.1)' : 'rgba(107, 114, 128, 0.1)', border: isPro ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(107, 114, 128, 0.3)', borderRadius: '0.5rem', color: isPro ? '#10b981' : '#6b7280', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
                 {isPro ? '📂 Bulk CSV Upload' : '🔒 CSV Upload (Pro)'}
               </button>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: '0.5rem', background: '#141824', border: '1px solid #1f2937' }}>
-                <span style={{ fontSize: '0.875rem', color: '#9ca3af' }}>{session.user.listingsUsed || 0} / {session.user.listingsLimit || 5}</span>
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#10b981', textTransform: 'capitalize' }}>{session.user.tier || 'free'}</span>
-              </div>
+              <div style={{ 
+  display: 'inline-flex', 
+  alignItems: 'center', 
+  gap: '0.5rem', 
+  padding: '0.5rem 1rem', 
+  borderRadius: '0.5rem', 
+  background: '#141824', 
+  border: '1px solid #1f2937',
+  position: 'relative',
+  transition: 'all 0.3s ease',
+  transform: usageUpdated ? 'scale(1.05)' : 'scale(1)',
+  boxShadow: usageUpdated ? '0 0 20px rgba(16, 185, 129, 0.4)' : 'none'
+}}>
+  {usageUpdated && (
+    <div style={{
+      position: 'absolute',
+      top: '-8px',
+      right: '-8px',
+      background: '#10b981',
+      color: '#0a0e1a',
+      borderRadius: '50%',
+      width: '20px',
+      height: '20px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '0.75rem',
+      fontWeight: 'bold',
+      animation: 'fadeInOut 1.5s ease-out'
+    }}>
+      +1
+    </div>
+  )}
+  <span style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
+    {session.user.listingsUsed || 0} / {session.user.listingsLimit || 5}
+  </span>
+  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#10b981', textTransform: 'capitalize' }}>
+    {session.user.tier || 'free'}
+  </span>
+</div>
             </div>
           </div>
           {error && (
