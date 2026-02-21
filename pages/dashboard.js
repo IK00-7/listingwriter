@@ -196,22 +196,7 @@ const handleImproveScore = async (scoreType) => {
   }
 }
 
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, marketplace, improvementFocus: improvementPrompts[scoreType] }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Failed to improve listing')
-      setResult(data)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setImproving(null)
-    }
-  }
-
+  
   const handleCsvUpload = (e) => {
     const file = e.target.files[0]
     if (!file) return
