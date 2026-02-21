@@ -32,9 +32,23 @@ export default function Header() {
             textDecoration: 'none',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            ⚡ ListingWriter
+            gap: '0.5rem',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)'
+            e.currentTarget.style.filter = 'brightness(1.2)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.filter = 'brightness(1)'
+          }}
+          >
+            <span style={{ 
+              display: 'inline-block',
+              animation: 'pulse 2s ease-in-out infinite'
+            }}>⚡</span> ListingWriter
           </a>
         </Link>
 
@@ -183,6 +197,20 @@ export default function Header() {
           )}
         </nav>
       </div>
+
+      {/* Add CSS animation for pulsing lightning bolt */}
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.1);
+          }
+        }
+      `}</style>
     </header>
   )
 }
