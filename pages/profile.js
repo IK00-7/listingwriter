@@ -212,7 +212,7 @@ export default function Profile() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <span style={{ fontSize: '0.875rem', color: '#9ca3af' }}>Listings this month</span>
                   <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#10b981' }}>
-                    {session?.user?.listingsUsed || 0} / {session?.user?.listingsLimit || 5}
+                    {session?.user?.listingsUsed || 0} / {session?.user?.tier === 'business' ? '∞' : (session?.user?.listingsLimit || 5)}
                   </span>
                 </div>
                 <div style={{ width: '100%', height: '12px', background: '#1f2937', borderRadius: '6px', overflow: 'hidden' }}>
