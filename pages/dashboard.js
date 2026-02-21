@@ -196,39 +196,6 @@ const handleImproveScore = async (scoreType) => {
   }
 }
 
-const improvementPrompts = {
-  seo: `You are optimizing for SEO. The current SEO score is low. Your MANDATORY tasks:
-1. Use the main product keyword EXACTLY 4 times in title and bullets
-2. Add these 5 keyword variations: [product type, product category, use case, material, benefit]
-3. Put product keyword in the FIRST 8 words of the title
-4. Add 2 long-tail keyword phrases (e.g., "best [product] for [use]")
-5. Keep conversion and readability high
-CRITICAL: The SEO score MUST increase by at least 10 points. Current SEO is too low.`,
-
-  conversion: `You are optimizing for conversion. The current conversion score is low. Your MANDATORY tasks:
-1. Add EXACTLY 3 specific numbers with benefits (e.g., "Saves 45 minutes daily", "Lasts 10+ years")
-2. Add social proof: "Join 50,000+ satisfied customers" or "4.8★ rating from 2,000+ reviews"
-3. Add guarantee: "100% satisfaction guaranteed or money back"
-4. Use these power words: Guaranteed, Proven, Certified, Premium (pick 2)
-5. Every bullet MUST start with a benefit, not a feature
-CRITICAL: The conversion score MUST increase by at least 10 points. Focus on urgency and proof.`,
-
-  readability: `You are optimizing for readability. The current readability score is low. Your MANDATORY tasks:
-1. ALL sentences must be under 12 words (currently too long)
-2. Replace ALL complex words with 5th grade level words
-3. Remove ALL jargon and technical terms
-4. Use simple, active voice only
-5. Break long bullets into shorter ones
-CRITICAL: The readability score MUST increase by at least 10 points. Make it scannable.`,
-
-  quality: `You are optimizing for quality/error score. The current quality score is low. Your MANDATORY tasks:
-1. Check and fix ALL grammar, spelling, punctuation errors
-2. Remove these vague words: amazing, great, best, perfect, excellent (replace with specifics)
-3. Add specific measurements: "8mm thin" not "slim", "weighs 4oz" not "lightweight"
-4. Ensure perfect consistency in capitalization and style
-5. Remove any repetitive phrasing
-CRITICAL: The quality score MUST increase by at least 10 points. Zero errors allowed.`
-}
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
