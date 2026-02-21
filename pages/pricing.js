@@ -16,11 +16,7 @@ export default function Pricing() {
     email: '',
     company: '',
     message: ''
-  useEffect(() => {
-    if (session) {
-      update()
-    }
-  }, [session])})
+  })
   const [contactSubmitted, setContactSubmitted] = useState(false)
 
   const plans = {
