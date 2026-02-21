@@ -124,7 +124,7 @@ export default function Home() {
       {/* ChatGPT - The Bad Way */}
       <div className="card" style={{ background: 'rgba(239, 68, 68, 0.05)', border: '2px solid rgba(239, 68, 68, 0.3)' }}>
         <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ef4444', marginBottom: '2rem' }}>
-          😤 Using ChatGPT
+          ❌ Using ChatGPT
         </h3>
         <ul style={{ listStyle: 'none', padding: 0, fontSize: '0.95rem', lineHeight: 2 }}>
           <li>❌ 30+ minutes crafting the perfect prompt</li>
