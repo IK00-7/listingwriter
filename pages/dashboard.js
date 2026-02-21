@@ -138,20 +138,64 @@ if (session?.user) {
   }
 
   const handleImproveScore = async (scoreType) => {
-    if (!isPro) {
-      router.push('/pricing')
-      return
-    }
-    setImproving(scoreType)
-    // REPLACE the improvementPrompts in dashboard.js with these BALANCED prompts:
-    setResult(data)
+  if (!isPro) {
+    router.push('/pricing')
+    return
+  }
 
-// ADD THESE LINES ↓
-if (session?.user) {
-  session.user.listingsUsed = (session.user.listingsUsed || 0) + 1
-  setUsageUpdated(true)
-  setTimeout(() => setUsageUpdated(false), 1500)
+  setImproving(scoreType)
+  setError(null)
+
+  try {
+    // Simple improvement messages - not as object inside function
+    let improvementMessage = ''
+    
+    if (scoreType === 'seo') {
+      improvementMessage = 'CRITICAL SEO TASK: Use the main product keyword 4 times. Add 5 related search terms. Put keyword in first 10 words of title. Add long-tail keywords. TARGET: Increase SEO score by 10-15 points while keeping other scores high.'
+    } else if (scoreType === 'conversion') {
+      improvementMessage = 'CRITICAL CONVERSION TASK: Add 3 specific numbers with benefits. Add social proof element. Add money-back guarantee. Use 2 power words (Guaranteed, Proven, Premium). TARGET: Increase conversion score by 10-15 points while keeping other scores high.'
+    } else if (scoreType === 'readability') {
+      improvementMessage = 'CRITICAL READABILITY TASK: Shorten ALL sentences to under 12 words. Use simple 5th grade words. Remove all jargon. Use active voice only. TARGET: Increase readability score by 10-15 points while keeping other scores high.'
+    } else if (scoreType === 'quality') {
+      improvementMessage = 'CRITICAL QUALITY TASK: Fix all grammar and spelling errors. Remove vague words. Add specific measurements and numbers. Perfect formatting. TARGET: Increase quality score by 10-15 points while keeping other scores high.'
+    }
+
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        productName: formData.productName,
+        features: formData.features,
+        pricePoint: formData.pricePoint,
+        marketplace: marketplace,
+        improvementFocus: improvementMessage
+      }),
+    })
+    
+    const data = await res.json()
+    
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to improve listing')
+    }
+    
+    setResult(data)
+    
+    // Update usage counter
+    if (session?.user) {
+      session.user.listingsUsed = (session.user.listingsUsed || 0) + 1
+      setUsageUpdated(true)
+      setTimeout(() => setUsageUpdated(false), 1500)
+    }
+    
+  } catch (err) {
+    console.error('Improve error:', err)
+    setError(err.message || 'Failed to improve listing')
+  } finally {
+    // ALWAYS reset improving state
+    setImproving(null)
+  }
 }
+
 const improvementPrompts = {
   seo: `You are optimizing for SEO. The current SEO score is low. Your MANDATORY tasks:
 1. Use the main product keyword EXACTLY 4 times in title and bullets
