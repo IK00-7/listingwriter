@@ -136,11 +136,47 @@ export default function Dashboard() {
     }
     setImproving(scoreType)
     const improvementPrompts = {
-      seo: 'Focus heavily on SEO optimization. Use the primary keyword more naturally throughout. Add related keywords.',
-      conversion: 'Make the copy more persuasive and compelling. Add urgency, scarcity, and stronger calls-to-action.',
-      readability: 'Simplify the language. Use shorter sentences. Make it easier to scan and understand quickly.',
-      quality: 'Polish the copy to perfection. Ensure flawless formatting, no errors, and professional tone throughout.'
-    }
+  seo: `CRITICAL SEO OPTIMIZATION TASK:
+- Use the main product keyword AT LEAST 3 times naturally
+- Include 5+ related search terms people actually use
+- Put the main keyword in the FIRST 10 words of the title
+- Add long-tail keywords in bullets
+- Use semantic keywords (synonyms, related terms)
+- Optimize for "how to" and "best" search queries
+- Make it rank #1 on Amazon/Google search`,
+
+  conversion: `CRITICAL CONVERSION OPTIMIZATION TASK:
+- Add URGENCY: "Limited time", "While supplies last", "Today only"
+- Add SOCIAL PROOF: "Thousands of 5-star reviews", "Best seller"
+- Add GUARANTEES: "100% satisfaction guaranteed", "30-day returns"
+- Use POWER WORDS: "Guaranteed", "Proven", "Instant", "Easy"
+- Include SPECIFIC NUMBERS: "Saves 3 hours", "Lasts 5+ years"
+- Address PAIN POINTS directly
+- End with STRONG call-to-action
+- Make every bullet focus on BENEFITS not features`,
+
+  readability: `CRITICAL READABILITY OPTIMIZATION TASK:
+- Use SIMPLE words (5th grade reading level)
+- Keep sentences UNDER 15 words each
+- Use SHORT paragraphs (2-3 sentences max)
+- Remove ALL jargon and technical terms
+- Use bullet points effectively
+- Add MORE white space
+- Make it SCANNABLE
+- Use active voice only
+- Remove complex sentences`,
+
+  quality: `CRITICAL QUALITY OPTIMIZATION TASK:
+- Fix ALL grammar and spelling errors
+- Ensure PERFECT punctuation
+- Make formatting FLAWLESS
+- Remove ALL vague words (amazing, great, best)
+- Be ULTRA SPECIFIC with measurements, numbers, facts
+- Ensure consistency in tone
+- Remove redundancy
+- Make every word count
+- Polish to PERFECTION`
+}
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
