@@ -194,25 +194,29 @@ export default function Header() {
               </a>
             </Link>
 
-            <button
-              onClick={() => router.push('/')}
-              style={{
-                padding: '0.5rem 1rem',
-                background: '#10b981',
-                color: '#0a0e1a',
-                border: 'none',
-                borderRadius: '0.375rem',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#34d399'}
-              onMouseLeave={(e) => e.target.style.background = '#10b981'}
-            >
-              Get Started
-            </button>
+        <button
+  onClick={() => {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/api/auth/signin'
+    }
+  }}
+  style={{
+    padding: '0.5rem 1rem',
+    background: '#10b981',
+    color: '#0a0e1a',
+    border: 'none',
+    borderRadius: '0.375rem',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    whiteSpace: 'nowrap'
+  }}
+  onMouseEnter={(e) => e.target.style.background = '#34d399'}
+  onMouseLeave={(e) => e.target.style.background = '#10b981'}
+>
+  Get Started
+</button>
           </nav>
         )}
       </div>
