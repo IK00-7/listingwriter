@@ -194,12 +194,9 @@ export default function Header() {
               </a>
             </Link>
 
-        <button
-  onClick={() => {
-    if (typeof window !== 'undefined') {
-      window.location.href = '/api/auth/signin'
-    }
-  }}
+import { useSession, signIn } from 'next-auth/react'  // Add signIn
+<button
+  onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
   style={{
     padding: '0.5rem 1rem',
     background: '#10b981',
