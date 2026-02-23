@@ -1,4 +1,4 @@
-import { useSession, signOut } from 'next-auth/react'
+import { useSession, signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 
@@ -151,14 +151,6 @@ export default function Header() {
               />
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <span style={{ 
-                  fontSize: '0.65rem', 
-                  color: '#9ca3af',
-                  lineHeight: 1,
-                  display: 'none'
-                }}>
-                  {session.user.name}
-                </span>
-                <span style={{ 
                   fontSize: '0.7rem', 
                   fontWeight: 600,
                   color: '#10b981',
@@ -194,26 +186,25 @@ export default function Header() {
               </a>
             </Link>
 
-import { useSession, signIn } from 'next-auth/react'  // Add signIn
-<button
-  onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-  style={{
-    padding: '0.5rem 1rem',
-    background: '#10b981',
-    color: '#0a0e1a',
-    border: 'none',
-    borderRadius: '0.375rem',
-    fontSize: '0.875rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    whiteSpace: 'nowrap'
-  }}
-  onMouseEnter={(e) => e.target.style.background = '#34d399'}
-  onMouseLeave={(e) => e.target.style.background = '#10b981'}
->
-  Get Started
-</button>
+            <button
+              onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#10b981',
+                color: '#0a0e1a',
+                border: 'none',
+                borderRadius: '0.375rem',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#34d399'}
+              onMouseLeave={(e) => e.target.style.background = '#10b981'}
+            >
+              Get Started
+            </button>
           </nav>
         )}
       </div>
@@ -230,7 +221,6 @@ import { useSession, signIn } from 'next-auth/react'  // Add signIn
           }
         }
 
-        /* Mobile specific fixes */
         @media (max-width: 768px) {
           header div {
             padding: 0.75rem !important;
