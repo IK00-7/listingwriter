@@ -1,10 +1,15 @@
 import { useSession, signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { useState } from 'react'
 
 export default function Header() {
   const { data: session } = useSession()
   const router = useRouter()
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Get first name only for mobile
+  const firstName = session?.user?.name?.split(' ')[0] || 'Account'
 
   return (
     <header style={{ 
@@ -17,16 +22,15 @@ export default function Header() {
       <div style={{ 
         maxWidth: '1400px', 
         margin: '0 auto', 
-        padding: '1rem',
+        padding: '0.75rem 1rem',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '0.5rem'
+        alignItems: 'center'
       }}>
+        {/* Logo */}
         <Link href="/">
           <a style={{ 
-            fontSize: '1.25rem',
+            fontSize: '1.15rem',
             fontWeight: 'bold', 
             background: 'linear-gradient(135deg, #10b981, #34d399)',
             WebkitBackgroundClip: 'text',
@@ -50,19 +54,20 @@ export default function Header() {
           >
             <span style={{ 
               display: 'inline-block',
-              animation: 'pulse 2s ease-in-out infinite'
-            }}>⚡</span> ListingWriter
+              animation: 'pulse 2s ease-in-out infinite',
+              fontSize: '1rem'
+            }}>⚡</span>
+            <span className="hide-on-tiny-mobile">ListingWriter</span>
+            <span className="show-on-tiny-mobile" style={{ display: 'none' }}>LW</span>
           </a>
         </Link>
 
+        {/* Navigation */}
         {session ? (
           <nav style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '1rem',
-            flexWrap: 'wrap',
-            justifyContent: 'flex-end',
-            flex: 1
+            gap: '0.75rem'
           }}>
             <Link href="/dashboard">
               <a style={{ 
@@ -115,65 +120,62 @@ export default function Header() {
               </a>
             </Link>
 
+            {/* User name as Profile button */}
             <Link href="/profile">
               <a style={{ 
-                color: router.pathname === '/profile' ? '#10b981' : '#9ca3af',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.35rem 0.65rem',
+                background: router.pathname === '/profile' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.05)',
+                border: `1px solid ${router.pathname === '/profile' ? 'rgba(16, 185, 129, 0.5)' : 'rgba(16, 185, 129, 0.2)'}`,
+                borderRadius: '0.375rem',
                 textDecoration: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 500,
-                transition: 'color 0.2s',
-                cursor: 'pointer',
+                transition: 'all 0.2s',
                 whiteSpace: 'nowrap'
               }}
-              onMouseEnter={(e) => e.target.style.color = '#10b981'}
-              onMouseLeave={(e) => e.target.style.color = router.pathname === '/profile' ? '#10b981' : '#9ca3af'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)'
+                e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.5)'
+              }}
+              onMouseLeave={(e) => {
+                if (router.pathname !== '/profile') {
+                  e.currentTarget.style.background = 'rgba(16, 185, 129, 0.05)'
+                  e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.2)'
+                }
+              }}
               >
-                Profile
+                <img 
+                  src={session.user.image} 
+                  alt="Profile" 
+                  style={{ 
+                    width: '20px', 
+                    height: '20px', 
+                    borderRadius: '50%',
+                    border: '1.5px solid #10b981'
+                  }}
+                />
+                <span style={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: 600,
+                  color: '#10b981'
+                }}>
+                  {firstName}
+                </span>
               </a>
             </Link>
-
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.5rem',
-              paddingLeft: '0.5rem',
-              borderLeft: '1px solid #1f2937'
-            }}>
-              <img 
-                src={session.user.image} 
-                alt="Profile" 
-                style={{ 
-                  width: '28px', 
-                  height: '28px', 
-                  borderRadius: '50%',
-                  border: '2px solid #10b981'
-                }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <span style={{ 
-                  fontSize: '0.7rem', 
-                  fontWeight: 600,
-                  color: '#10b981',
-                  textTransform: 'capitalize',
-                  lineHeight: 1
-                }}>
-                  {session.user.tier || 'free'}
-                </span>
-              </div>
-            </div>
           </nav>
         ) : (
           <nav style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '1rem',
-            flexWrap: 'wrap'
+            gap: '0.75rem'
           }}>
             <Link href="/pricing">
               <a style={{ 
                 color: '#9ca3af',
                 textDecoration: 'none',
-                fontSize: '0.875rem',
+                fontSize: '0.8rem',
                 fontWeight: 500,
                 transition: 'color 0.2s',
                 cursor: 'pointer',
@@ -194,7 +196,7 @@ export default function Header() {
                 color: '#0a0e1a',
                 border: 'none',
                 borderRadius: '0.375rem',
-                fontSize: '0.875rem',
+                fontSize: '0.8rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -221,18 +223,29 @@ export default function Header() {
           }
         }
 
+        /* Mobile optimizations */
         @media (max-width: 768px) {
           header div {
-            padding: 0.75rem !important;
+            padding: 0.65rem 0.75rem !important;
           }
           
           nav {
-            width: 100%;
-            justify-content: space-between !important;
+            gap: 0.5rem !important;
           }
           
           nav a {
-            font-size: 0.75rem !important;
+            font-size: 0.7rem !important;
+          }
+        }
+
+        /* Extra tiny mobile */
+        @media (max-width: 390px) {
+          .hide-on-tiny-mobile {
+            display: none !important;
+          }
+          
+          .show-on-tiny-mobile {
+            display: inline !important;
           }
         }
       `}</style>
