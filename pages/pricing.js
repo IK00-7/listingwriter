@@ -11,6 +11,12 @@ export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState('monthly')
   const [showContactForm, setShowContactForm] = useState(false)
   const [loading, setLoading] = useState(null)
+  // ADD THIS useEffect - Force session refresh
+  useEffect(() => {
+    if (session) {
+      update()  // This refreshes session from database
+    }
+  }, [])  // Run once when page loads
   const [contactForm, setContactForm] = useState({
     name: '',
     email: '',
