@@ -6,17 +6,19 @@ import Link from 'next/link'
 import Header from '../components/Header'
 
 export default function Pricing() {
-  const { data: session } = useSession()
+  const { data: session, status, update } = useSession()
   const router = useRouter()
   const [billingCycle, setBillingCycle] = useState('monthly')
   const [showContactForm, setShowContactForm] = useState(false)
   const [loading, setLoading] = useState(null)
-  // ADD THIS useEffect - Force session refresh
+  
+  // Force session refresh to get current tier
   useEffect(() => {
     if (session) {
-      update()  // This refreshes session from database
+      update()
     }
-  }, [])  // Run once when page loads
+  }, [])
+  
   const [contactForm, setContactForm] = useState({
     name: '',
     email: '',
