@@ -1,14 +1,11 @@
 import { useSession, signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useState } from 'react'
 
 export default function Header() {
   const { data: session } = useSession()
   const router = useRouter()
-  const [menuOpen, setMenuOpen] = useState(false)
 
-  // Get first name only for mobile
   const firstName = session?.user?.name?.split(' ')[0] || 'Account'
 
   return (
@@ -22,15 +19,15 @@ export default function Header() {
       <div style={{ 
         maxWidth: '1400px', 
         margin: '0 auto', 
-        padding: '0.75rem 1rem',
+        padding: '1rem 1.5rem',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        {/* Logo */}
+        {/* Logo - NOW GOES TO HOMEPAGE */}
         <Link href="/">
           <a style={{ 
-            fontSize: '1.15rem',
+            fontSize: '1.5rem',
             fontWeight: 'bold', 
             background: 'linear-gradient(135deg, #10b981, #34d399)',
             WebkitBackgroundClip: 'text',
@@ -38,7 +35,7 @@ export default function Header() {
             textDecoration: 'none',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.25rem',
+            gap: '0.5rem',
             transition: 'all 0.3s ease',
             cursor: 'pointer',
             whiteSpace: 'nowrap'
@@ -52,13 +49,13 @@ export default function Header() {
             e.currentTarget.style.filter = 'brightness(1)'
           }}
           >
+            {/* Lightning with animation */}
             <span style={{ 
               display: 'inline-block',
               animation: 'pulse 2s ease-in-out infinite',
-              fontSize: '1rem'
+              fontSize: '1.5rem'
             }}>⚡</span>
-            <span className="hide-on-tiny-mobile">ListingWriter</span>
-            <span className="show-on-tiny-mobile" style={{ display: 'none' }}>LW</span>
+            <span className="hide-on-mobile-logo">ListingWriter</span>
           </a>
         </Link>
 
@@ -67,20 +64,20 @@ export default function Header() {
           <nav style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '0.75rem'
+            gap: '1.25rem'
           }}>
             <Link href="/dashboard">
               <a style={{ 
-                color: router.pathname === '/dashboard' ? '#10b981' : '#9ca3af',
+                color: router.pathname === '/dashboard' ? '#10b981' : '#d1d5db',
                 textDecoration: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 500,
+                fontSize: '0.95rem',
+                fontWeight: 600,
                 transition: 'color 0.2s',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap'
               }}
               onMouseEnter={(e) => e.target.style.color = '#10b981'}
-              onMouseLeave={(e) => e.target.style.color = router.pathname === '/dashboard' ? '#10b981' : '#9ca3af'}
+              onMouseLeave={(e) => e.target.style.color = router.pathname === '/dashboard' ? '#10b981' : '#d1d5db'}
               >
                 Dashboard
               </a>
@@ -88,16 +85,16 @@ export default function Header() {
 
             <Link href="/history">
               <a style={{ 
-                color: router.pathname === '/history' ? '#10b981' : '#9ca3af',
+                color: router.pathname === '/history' ? '#10b981' : '#d1d5db',
                 textDecoration: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 500,
+                fontSize: '0.95rem',
+                fontWeight: 600,
                 transition: 'color 0.2s',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap'
               }}
               onMouseEnter={(e) => e.target.style.color = '#10b981'}
-              onMouseLeave={(e) => e.target.style.color = router.pathname === '/history' ? '#10b981' : '#9ca3af'}
+              onMouseLeave={(e) => e.target.style.color = router.pathname === '/history' ? '#10b981' : '#d1d5db'}
               >
                 History
               </a>
@@ -105,43 +102,43 @@ export default function Header() {
 
             <Link href="/pricing">
               <a style={{ 
-                color: router.pathname === '/pricing' ? '#10b981' : '#9ca3af',
+                color: router.pathname === '/pricing' ? '#10b981' : '#d1d5db',
                 textDecoration: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 500,
+                fontSize: '0.95rem',
+                fontWeight: 600,
                 transition: 'color 0.2s',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap'
               }}
               onMouseEnter={(e) => e.target.style.color = '#10b981'}
-              onMouseLeave={(e) => e.target.style.color = router.pathname === '/pricing' ? '#10b981' : '#9ca3af'}
+              onMouseLeave={(e) => e.target.style.color = router.pathname === '/pricing' ? '#10b981' : '#d1d5db'}
               >
                 Pricing
               </a>
             </Link>
 
-            {/* User name as Profile button */}
+            {/* User profile button */}
             <Link href="/profile">
               <a style={{ 
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.35rem 0.65rem',
-                background: router.pathname === '/profile' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.05)',
-                border: `1px solid ${router.pathname === '/profile' ? 'rgba(16, 185, 129, 0.5)' : 'rgba(16, 185, 129, 0.2)'}`,
-                borderRadius: '0.375rem',
+                gap: '0.5rem',
+                padding: '0.5rem 0.85rem',
+                background: router.pathname === '/profile' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
+                border: `2px solid ${router.pathname === '/profile' ? '#10b981' : 'rgba(16, 185, 129, 0.3)'}`,
+                borderRadius: '0.5rem',
                 textDecoration: 'none',
                 transition: 'all 0.2s',
                 whiteSpace: 'nowrap'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)'
-                e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.5)'
+                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.2)'
+                e.currentTarget.style.borderColor = '#10b981'
               }}
               onMouseLeave={(e) => {
                 if (router.pathname !== '/profile') {
-                  e.currentTarget.style.background = 'rgba(16, 185, 129, 0.05)'
-                  e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.2)'
+                  e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'
+                  e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.3)'
                 }
               }}
               >
@@ -149,14 +146,14 @@ export default function Header() {
                   src={session.user.image} 
                   alt="Profile" 
                   style={{ 
-                    width: '20px', 
-                    height: '20px', 
+                    width: '24px', 
+                    height: '24px', 
                     borderRadius: '50%',
-                    border: '1.5px solid #10b981'
+                    border: '2px solid #10b981'
                   }}
                 />
                 <span style={{ 
-                  fontSize: '0.75rem', 
+                  fontSize: '0.875rem', 
                   fontWeight: 600,
                   color: '#10b981'
                 }}>
@@ -169,20 +166,20 @@ export default function Header() {
           <nav style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '0.75rem'
+            gap: '1.25rem'
           }}>
             <Link href="/pricing">
               <a style={{ 
-                color: '#9ca3af',
+                color: '#d1d5db',
                 textDecoration: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 500,
+                fontSize: '0.95rem',
+                fontWeight: 600,
                 transition: 'color 0.2s',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap'
               }}
               onMouseEnter={(e) => e.target.style.color = '#10b981'}
-              onMouseLeave={(e) => e.target.style.color = '#9ca3af'}
+              onMouseLeave={(e) => e.target.style.color = '#d1d5db'}
               >
                 Pricing
               </a>
@@ -191,19 +188,25 @@ export default function Header() {
             <button
               onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
               style={{
-                padding: '0.5rem 1rem',
+                padding: '0.65rem 1.5rem',
                 background: '#10b981',
                 color: '#0a0e1a',
                 border: 'none',
-                borderRadius: '0.375rem',
-                fontSize: '0.8rem',
+                borderRadius: '0.5rem',
+                fontSize: '0.95rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 whiteSpace: 'nowrap'
               }}
-              onMouseEnter={(e) => e.target.style.background = '#34d399'}
-              onMouseLeave={(e) => e.target.style.background = '#10b981'}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#34d399'
+                e.target.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = '#10b981'
+                e.target.style.transform = 'translateY(0)'
+              }}
             >
               Get Started
             </button>
@@ -219,33 +222,33 @@ export default function Header() {
           }
           50% {
             opacity: 0.8;
-            transform: scale(1.1);
+            transform: scale(1.15);
           }
         }
 
         /* Mobile optimizations */
         @media (max-width: 768px) {
-          header div {
-            padding: 0.65rem 0.75rem !important;
+          header > div {
+            padding: 0.85rem 1rem !important;
           }
           
           nav {
-            gap: 0.5rem !important;
+            gap: 0.75rem !important;
           }
           
           nav a {
-            font-size: 0.7rem !important;
+            font-size: 0.85rem !important;
+          }
+          
+          .hide-on-mobile-logo {
+            display: none;
           }
         }
 
-        /* Extra tiny mobile */
-        @media (max-width: 390px) {
-          .hide-on-tiny-mobile {
-            display: none !important;
-          }
-          
-          .show-on-tiny-mobile {
-            display: inline !important;
+        /* Desktop */
+        @media (min-width: 769px) {
+          .hide-on-mobile-logo {
+            display: inline;
           }
         }
       `}</style>
