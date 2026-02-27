@@ -54,14 +54,15 @@ export default function Home() {
     }
   }, [])
 
-  if (status === 'authenticated') {
-    router.push('/dashboard')
-    return null
-  }
+// Allow logged-in users to view homepage
+// if (status === 'authenticated') {
+//   router.push('/dashboard')
+//   return null
+// }
 
-  return (
-    <>
-      <Head>
+return (
+  <>
+    <Head>
         <title>ListingWriter - Listings that actually sell</title>
       </Head>
 
