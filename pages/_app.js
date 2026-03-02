@@ -1,8 +1,7 @@
-import { Analytics } from '@vercel/analytics/react'
 import '../styles/globals.css'
 import { SessionProvider } from 'next-auth/react'
 import { Analytics } from '@vercel/analytics/next'
-
+import { Analytics } from '@vercel/analytics/react'
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   return (
     <SessionProvider session={session}>
